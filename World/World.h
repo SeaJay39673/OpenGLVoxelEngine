@@ -27,7 +27,7 @@ public:
     {
         view = mat4(1.0f);
         camera.SetShader(&shader);
-        ChunkManager::InitChunkManager(camera.GetCameraPos(), 2);
+        ChunkManager::InitChunkManager(camera.GetCameraPos(), 1);
     };
 
 public:
@@ -44,12 +44,14 @@ public:
         Mouse::delx = 0;
         Mouse::dely = 0;
     };
+
     void Render() override
     {
         shader.Use();
         shader.SetMat4f("view", view);
         ChunkManager::RenderChunks(shader);
     };
+
     void Start() override
     {
         _app->RegisterFrameSizeCallback("ViewPort",
