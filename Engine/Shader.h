@@ -37,6 +37,8 @@ public:
     {
         glUniformMatrix4fv(glGetUniformLocation(_id, name.c_str()), 1, GL_FALSE, value_ptr(mat));
     };
+
+    mat4 GetProjection() { return projection; };
 };
 
 bool Shader::loadShaderCode(const string &path, string &code)

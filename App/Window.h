@@ -87,7 +87,6 @@ bool Window::initializeWindow()
                                            instance->_height = height;
                                            for (const auto &pair : instance->frameSizeCallbacks)
                                            {
-                                               cout << "framesize callback: " << pair.first << endl;
                                                pair.second(width, height);
                                            }
                                        }
@@ -104,7 +103,6 @@ bool Window::initializeWindow()
                                  {
                                      for (const auto &pair : instance->mouseCallbacks)
                                      {
-                                         cout << "mouse callback: " << pair.first << endl;
                                          pair.second(xpos, ypos);
                                      }
                                  }
@@ -121,7 +119,6 @@ bool Window::initializeWindow()
                            {
                                for (const auto &pair : instance->keyCallbacks)
                                {
-                                   cout << "key callback: " << pair.first << endl;
                                    pair.second(key, scancode, action, mods);
                                }
                            }
@@ -166,6 +163,9 @@ Window::Window()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK); // Cull back faces (default)
+    glFrontFace(GL_CCW); // Counter-clockwise vertices define the front face
 }
 
 //====| Public Methods |====//

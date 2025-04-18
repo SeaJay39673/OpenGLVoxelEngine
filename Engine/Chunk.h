@@ -31,7 +31,10 @@ private:
 
 public:
     Chunk(int pos[3]);
+    ~Chunk();
     void Render(Shader &shader);
+    static int ChunkSize() { return chunkSize; };
+    int *Chunk::GetPosition() { return position; }
 };
 
 Chunk::Chunk(int pos[3])
@@ -40,52 +43,14 @@ Chunk::Chunk(int pos[3])
     for (int i = 0; i < chunkSize; i++)
         for (int j = 0; j < chunkSize; j++)
             for (int k = 0; k < chunkSize; k++)
-                voxels[i][j][k] = VoxelType::DIRT;
+                voxels[i][j][k] = rand() % 100 < 60 ? VoxelType::DIRT : VoxelType::AIR;
     loadChunk();
-    // vector<int> vertices;
-    // vector<unsigned int> indices;
-    // vector<int> vertices = {
-    //     1, 1, -10,   // top right
-    //     1, -1, -10,  // bottom right
-    //     -1, -1, -10, // bottom left
-    //     -1, 1, -10   // top left
-    // };
-    // vector<unsigned int> indices = {
-    //     // note that we start from 0!
-    //     0, 1, 3, // first Triangle
-    //     1, 2, 3  // second Triangle
-    // };
-
-    // vao.Bind();
-    // vbo = new BO(vertices);
-    // ebo = new BO(indices);
-    // vao.LinkBO(*vbo);
-    // vbo->Unbind();
-    // vao.Unbind();
-    // ebo->Unbind();
 }
 
-void Chunk::loadSquare()
+Chunk::~Chunk()
 {
-    vector<int> vertices = {
-        1, 1, -10,   // top right
-        1, -1, -10,  // bottom right
-        -1, -1, -10, // bottom left
-        -1, 1, -10   // top left
-    };
-    vector<unsigned int> indices = {
-        // note that we start from 0!
-        0, 1, 3, // first Triangle
-        1, 2, 3  // second Triangle
-    };
-
-    vao.Bind();
-    vbo = new BO(vertices);
-    ebo = new BO(indices);
-    vao.LinkBO(*vbo);
-    vbo->Unbind();
-    vao.Unbind();
-    ebo->Unbind();
+    delete vbo;
+    delete ebo;
 }
 
 void Chunk::loadChunk()
@@ -114,54 +79,36 @@ void Chunk::loadChunk()
                             i + 1 + position[0], j + 1 + position[1], k + 1 + position[2], // Near Top Right
                             i + 1 + position[0], j + position[1], k + 1 + position[2],     // Near Bottom Right
                         });
-                    // Front face
-                    indices.insert(indices.end(), {offset + 0, offset + 1, offset + 2,
-                                                   offset + 0, offset + 2, offset + 3});
 
-                    // Back face
-                    indices.insert(indices.end(), {offset + 4, offset + 5, offset + 6,
-                                                   offset + 4, offset + 6, offset + 7});
+                    // Front face (CCW)
+                    indices.insert(indices.end(), {offset + 0, offset + 1, offset + 3,
+                                                   offset + 1, offset + 2, offset + 3});
 
-                    // Left face
-                    indices.insert(indices.end(), {offset + 0, offset + 4, offset + 7,
-                                                   offset + 0, offset + 7, offset + 3});
+                    // Back face (CCW)
+                    indices.insert(indices.end(), {offset + 4, offset + 7, offset + 5,
+                                                   offset + 5, offset + 7, offset + 6});
 
-                    // Right face
-                    indices.insert(indices.end(), {offset + 1, offset + 5, offset + 6,
-                                                   offset + 1, offset + 6, offset + 2});
+                    // Left face (CCW)
+                    indices.insert(indices.end(), {offset + 0, offset + 4, offset + 1,
+                                                   offset + 1, offset + 4, offset + 5});
 
-                    // Top face
-                    indices.insert(indices.end(), {offset + 1, offset + 5, offset + 4,
-                                                   offset + 1, offset + 4, offset + 0});
+                    // Right face (CCW)
+                    indices.insert(indices.end(), {offset + 3, offset + 2, offset + 7,
+                                                   offset + 2, offset + 6, offset + 7});
 
-                    // Bottom face
-                    indices.insert(indices.end(), {offset + 3, offset + 7, offset + 6,
-                                                   offset + 3, offset + 6, offset + 2});
+                    // Top face (CCW)
+                    indices.insert(indices.end(), {offset + 1, offset + 5, offset + 2,
+                                                   offset + 2, offset + 5, offset + 6});
+
+                    // Bottom face (CCW)
+                    indices.insert(indices.end(), {offset + 0, offset + 3, offset + 4,
+                                                   offset + 3, offset + 7, offset + 4});
 
                     offset += 8; // Each cube adds 8 vertices
                 }
             }
         }
     }
-
-    // for (int i = 0; i < chunkSize; i++)
-    // {
-    //     if (voxels[i][0][0] != VoxelType::AIR)
-    //     {
-    //         vertices.insert(vertices.end(), {
-    //                                             1 + i, 1, -10,   // top right
-    //                                             1 + i, -1, -10,  // bottom right
-    //                                             -1 + i, -1, -10, // bottom left
-    //                                             -1 + i, 1, -10   // top left
-    //                                         });
-
-    //         unsigned int offset = i * 6;
-    //         indices.insert(indices.end(), {
-    //                                           offset + 0, offset + 1, offset + 3, // first Triangle
-    //                                           offset + 1, offset + 2, offset + 3  // second Triangle
-    //                                       });
-    //     }
-    // }
 
     vao.Bind();
     vbo = new BO(vertices);

@@ -18,13 +18,13 @@ private:
     void updateCamera();
 
 public:
-    Camera(mat4 *view, vec3 up = vec3(0, 1, 0)) : view(view), up(up)
+    Camera(mat4 *view, vec3 up = vec3(0, 1, 0)) : view(view), up(up), yaw(-90), pitch(0), roll(0)
     {
         // Only used in setup
-        glm::vec3 cameraTarget = glm::vec3(0, 0, 3);
+        vec3 cameraTarget = vec3(0, 0, -1); // Where the camera is looking at
 
         // Will vary with movement
-        cameraPos = glm::vec3(0, 0, 0);
+        cameraPos = vec3(0, 0, 0);
         cameraDirection = glm::normalize(cameraPos - cameraTarget);
         cameraFront = glm::normalize(cameraPos - cameraDirection);
         cameraRight = glm::normalize(glm::cross(up, cameraDirection));
@@ -64,6 +64,9 @@ public:
         updateCamera();
     }
     void ProcessInput();
+
+    vec3 GetCameraPos() const { return cameraPos; }
+    vec3 GetCameraDirection() const { return cameraDirection; }
 };
 
 void Camera::updateCamera()
@@ -102,7 +105,7 @@ void Camera::ProcessInput()
     if (Keyboard::keys[GLFW_KEY_LEFT_SHIFT])
         SlideUp(-0.01f);
     if (Mouse::delx)
-        Yaw(-Mouse::delx * 0.08);
+        Yaw(Mouse::delx * 0.08);
     if (Mouse::dely)
         Pitch(-Mouse::dely * 0.08);
 }

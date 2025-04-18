@@ -6,8 +6,8 @@
 // #include <GLFW/glfw3.h>
 
 #include "../Game/Game.h"
+#include "../Engine/ChunkManager.h"
 #include "../Engine/Shader.h"
-#include "../Engine/Chunk.h"
 #include "../Engine/Camera.h"
 #include "../IO/Mouse.h"
 #include "../IO/Keyboard.h"
@@ -18,17 +18,16 @@ class World : Game
 {
 private:
     mat4 view;
+    mat4 *projection;
     Camera camera;
     Shader shader;
-    Chunk *chunk; // Create a chunk at the origin
+
 public:
     World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&view)
     {
         view = mat4(1.0f);
-        int pos[3] = {-8, -8, -50};
-        chunk = new Chunk(pos);
         camera.SetShader(&shader);
-        shader.Use();
+        ChunkManager::InitChunkManager(camera.GetCameraPos(), 2);
     };
 
 public:
@@ -49,7 +48,7 @@ public:
     {
         shader.Use();
         shader.SetMat4f("view", view);
-        chunk->Render(shader);
+        ChunkManager::RenderChunks(shader);
     };
     void Start() override
     {
