@@ -2,6 +2,11 @@
 
 out vec4 FragColor;
 
-void main() {
-    FragColor = vec4(1.0, 1.0, 1.0, 1.0); // Set color to white
+in vec2 TexCoord; // Texture coordinates from the vertex shader
+
+uniform sampler2D texture1; // The texture sampler
+
+void main()
+{
+    FragColor =  texture(texture1, TexCoord); // Sample the texture using the texture coordinates
 }

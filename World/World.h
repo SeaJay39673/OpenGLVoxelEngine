@@ -9,6 +9,7 @@
 #include "../Engine/ChunkManager.h"
 #include "../Engine/Shader.h"
 #include "../Engine/Camera.h"
+#include "../Engine/Frustum.h"
 #include "../IO/Mouse.h"
 #include "../IO/Keyboard.h"
 
@@ -21,13 +22,14 @@ private:
     mat4 *projection;
     Camera camera;
     Shader shader;
+    Frustum frustum;
 
 public:
     World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&view)
     {
         view = mat4(1.0f);
         camera.SetShader(&shader);
-        ChunkManager::InitChunkManager(camera.GetCameraPos(), 1);
+        ChunkManager::InitChunkManager(camera.GetCameraPos(), 3);
     };
 
 public:
@@ -49,7 +51,8 @@ public:
     {
         shader.Use();
         shader.SetMat4f("view", view);
-        ChunkManager::RenderChunks(shader);
+        frustum.Update(shader.GetProjection(), view);
+        ChunkManager::RenderChunks(shader, frustum);
     };
 
     void Start() override

@@ -41,6 +41,9 @@ target_link_libraries(OpenWorld PRIVATE glfw)
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(OpenWorld PRIVATE glm::glm)
 
+find_package(Stb REQUIRED)
+target_include_directories(OpenWorld PRIVATE ${Stb_INCLUDE_DIRS})
+
 ################################################################
 # Set install paths so the installer can find required resources
 ################################################################

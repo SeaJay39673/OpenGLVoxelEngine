@@ -2,6 +2,8 @@
 #define CHUNKMANAGER_H
 
 #include "Chunk.h"
+#include "Texture.h"
+#include "Frustum.h"
 
 using glm::vec4;
 
@@ -15,6 +17,7 @@ private:
 public:
     static void InitChunkManager(vec3 cameraPos, int renderDistance = 5)
     {
+        Texture::RegisterTexture(VoxelType::DIRT, "./Resources/Textures/brick.jpg");
         ChunkManager::renderDistance = renderDistance;
         chunks.reserve(renderDistance * renderDistance * renderDistance);
         generateChunks(cameraPos);
@@ -22,7 +25,7 @@ public:
 
     static void SetRenderDistance(int distance) { renderDistance = distance; }
     static int GetRenderDistance() { return renderDistance; }
-    static void RenderChunks(Shader &shader);
+    static void RenderChunks(Shader &shader, const Frustum &frustum);
 };
 
 int ChunkManager::renderDistance = 0;
@@ -48,10 +51,20 @@ void ChunkManager::generateChunks(vec3 cameraPos)
     }
 }
 
-void ChunkManager::RenderChunks(Shader &shader)
+void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
 {
     for (Chunk *chunk : chunks)
-        chunk->Render(shader);
+    {
+        // Calculate the bounding box of the chunk
+        vec3 min(chunk->GetPosition()[0], chunk->GetPosition()[1], chunk->GetPosition()[2]);
+        vec3 max = min + vec3(Chunk::ChunkSize());
+
+        // Check if the chunk is in the frustum
+        if (frustum.IsBoxInFrustum(min, max))
+        {
+            chunk->Render(shader);
+        }
+    }
 }
 
 #endif

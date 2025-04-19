@@ -2,7 +2,8 @@
   "dependencies": [
     "glad",
     "glfw3",
+    "glm",
     "opengl",
-    "glm"
+    "stb"
   ]
 }

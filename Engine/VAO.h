@@ -33,12 +33,24 @@ public:
     {
         Bind();
         bo.Bind();
-        glVertexAttribPointer(0, 3, GL_INT, GL_FALSE, 3 * sizeof(int), (void *)0);
-        // glVertexAttribPointer(1, 3, GL_INT, GL_FALSE, sizeof(int), (void *)(sizeof(int) * 3));
-        // glVertexAttribPointer(2, 2, GL_INT, GL_FALSE, sizeof(int), (void *)(sizeof(int) * 6));
+        switch (bo.GetType())
+        {
+        case BOType::VERTEX:
+            glVertexAttribPointer(0, 3, GL_INT, GL_FALSE, sizeof(Vertex), (void *)0);
+            glVertexAttribPointer(1, 3, GL_INT, GL_FALSE, sizeof(Vertex), (void *)(sizeof(int) * 3));
+            glVertexAttribPointer(2, 2, GL_INT, GL_FALSE, sizeof(Vertex), (void *)(sizeof(int) * 6));
+            break;
+        case BOType::INT:
+            glVertexAttribIPointer(0, 3, GL_INT, sizeof(int), (void *)0);
+            glVertexAttribIPointer(1, 3, GL_INT, sizeof(int), (void *)(sizeof(int) * 3));
+            glVertexAttribIPointer(2, 2, GL_INT, sizeof(int), (void *)(sizeof(int) * 6));
+            break;
+        default:
+            break;
+        }
         glEnableVertexAttribArray(0);
-        // glEnableVertexAttribArray(1);
-        // glEnableVertexAttribArray(2);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
     }
 };
 

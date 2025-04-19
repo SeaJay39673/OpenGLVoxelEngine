@@ -4,6 +4,7 @@
 
 #include "VAO.h"
 #include "Shader.h"
+#include "Texture.h"
 
 #include <vector>
 
@@ -27,7 +28,7 @@ private:
     int position[3];
     VoxelType voxels[chunkSize][chunkSize][chunkSize];
     void loadChunk();
-    void generateVoxel(vector<int> &vertices, vector<unsigned int> &indices, int i, int j, int k, unsigned int &offset);
+    void generateVoxel(vector<Vertex> &vertices, int i, int j, int k);
 
 public:
     Chunk(int pos[3]);
@@ -53,52 +54,92 @@ Chunk::~Chunk()
     delete ebo;
 }
 
-void Chunk::generateVoxel(vector<int> &vertices, vector<unsigned int> &indices, int i, int j, int k, unsigned int &offset)
+void Chunk::generateVoxel(vector<Vertex> &vertices, int i, int j, int k)
 {
-    vertices.insert(
-        vertices.end(),
-        {
-            i + position[0], j + position[1], k + position[2],             // bottom left
-            i + position[0], j + 1 + position[1], k + position[2],         // top left
-            i + 1 + position[0], j + 1 + position[1], k + position[2],     // top right
-            i + 1 + position[0], j + position[1], k + position[2],         // bottom right
-            i + position[0], j + position[1], k + 1 + position[2],         // Near Bottom Left
-            i + position[0], j + 1 + position[1], k + 1 + position[2],     // Near Top Left
-            i + 1 + position[0], j + 1 + position[1], k + 1 + position[2], // Near Top Right
-            i + 1 + position[0], j + position[1], k + 1 + position[2],     // Near Bottom Right
-        });
+    // Define the 8 corner positions of the cube relative to the voxel's position
+    int positions[8][3] = {
+        {i + position[0], j + position[1], k + position[2]},             // bottom left
+        {i + position[0], j + 1 + position[1], k + position[2]},         // top left
+        {i + 1 + position[0], j + 1 + position[1], k + position[2]},     // top right
+        {i + 1 + position[0], j + position[1], k + position[2]},         // bottom right
+        {i + position[0], j + position[1], k + 1 + position[2]},         // near bottom left
+        {i + position[0], j + 1 + position[1], k + 1 + position[2]},     // near top left
+        {i + 1 + position[0], j + 1 + position[1], k + 1 + position[2]}, // near top right
+        {i + 1 + position[0], j + position[1], k + 1 + position[2]}      // near bottom right
+    };
+
+    // Define normals for each face
+    int normals[6][3] = {
+        {0, 0, -1}, // Front face
+        {0, 0, 1},  // Back face
+        {-1, 0, 0}, // Left face
+        {1, 0, 0},  // Right face
+        {0, 1, 0},  // Top face
+        {0, -1, 0}  // Bottom face
+    };
+
+    // Define texture coordinates for each vertex
+    int texCoords[4][2] = {
+        {0, 0}, // Bottom left
+        {0, 1}, // Top left
+        {1, 1}, // Top right
+        {1, 0}  // Bottom right
+    };
+
+    // Generate vertices for each face of the cube
 
     // Front face (CCW)
-    indices.insert(indices.end(), {offset + 0, offset + 1, offset + 3,
-                                   offset + 1, offset + 2, offset + 3});
+    vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
+    vertices.push_back(Vertex(positions[1], normals[0], texCoords[1]));
+    vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
+    vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
+    vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
+    vertices.push_back(Vertex(positions[3], normals[0], texCoords[3]));
 
     // Back face (CCW)
-    indices.insert(indices.end(), {offset + 4, offset + 7, offset + 5,
-                                   offset + 5, offset + 7, offset + 6});
+    vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
+    vertices.push_back(Vertex(positions[6], normals[1], texCoords[1]));
+    vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
+    vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
+    vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
+    vertices.push_back(Vertex(positions[4], normals[1], texCoords[3]));
 
     // Left face (CCW)
-    indices.insert(indices.end(), {offset + 0, offset + 4, offset + 1,
-                                   offset + 1, offset + 4, offset + 5});
+    vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
+    vertices.push_back(Vertex(positions[5], normals[2], texCoords[1]));
+    vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
+    vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
+    vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
+    vertices.push_back(Vertex(positions[0], normals[2], texCoords[3]));
 
     // Right face (CCW)
-    indices.insert(indices.end(), {offset + 3, offset + 2, offset + 7,
-                                   offset + 2, offset + 6, offset + 7});
+    vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
+    vertices.push_back(Vertex(positions[2], normals[3], texCoords[1]));
+    vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
+    vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
+    vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
+    vertices.push_back(Vertex(positions[7], normals[3], texCoords[3]));
 
     // Top face (CCW)
-    indices.insert(indices.end(), {offset + 1, offset + 5, offset + 2,
-                                   offset + 2, offset + 5, offset + 6});
+    vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
+    vertices.push_back(Vertex(positions[5], normals[4], texCoords[1]));
+    vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
+    vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
+    vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
+    vertices.push_back(Vertex(positions[2], normals[4], texCoords[3]));
 
-    // Bottom face (CCW)
-    indices.insert(indices.end(), {offset + 0, offset + 3, offset + 4,
-                                   offset + 3, offset + 7, offset + 4});
-
-    offset += 8; // Each cube adds 8 vertices
+    // Bottom face (CCW) - FIXED
+    vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
+    vertices.push_back(Vertex(positions[0], normals[5], texCoords[1]));
+    vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
+    vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
+    vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
+    vertices.push_back(Vertex(positions[7], normals[5], texCoords[3]));
 }
 
 void Chunk::loadChunk()
 {
-    vector<int> vertices;
-    vector<unsigned int> indices;
+    vector<Vertex> vertices;
 
     unsigned int offset = 0;
     for (int i = 0; i < chunkSize; i++)
@@ -111,7 +152,7 @@ void Chunk::loadChunk()
                 {
                     if (!i || !j || !k || i == chunkSize - 1 || j == chunkSize - 1 || k == chunkSize - 1)
                     {
-                        generateVoxel(vertices, indices, i, j, k, offset);
+                        generateVoxel(vertices, i, j, k);
                         continue;
                     }
                     if (voxels[i - 1][j][k] == VoxelType::AIR ||
@@ -121,7 +162,7 @@ void Chunk::loadChunk()
                         voxels[i][j][k - 1] == VoxelType::AIR ||
                         k + 1 < chunkSize && voxels[i][j][k + 1] == VoxelType::AIR)
                     {
-                        generateVoxel(vertices, indices, i, j, k, offset);
+                        generateVoxel(vertices, i, j, k);
                     }
                 }
             }
@@ -130,18 +171,21 @@ void Chunk::loadChunk()
 
     vao.Bind();
     vbo = new BO(vertices);
-    ebo = new BO(indices);
+    // ebo = new BO(indices);
     vao.LinkBO(*vbo);
     vbo->Unbind();
     vao.Unbind();
-    ebo->Unbind();
+    // ebo->Unbind();
 }
 
 void Chunk::Render(Shader &shader)
 {
     shader.Use();
     vao.Bind();
-    glDrawElements(GL_TRIANGLES, ebo->GetCount(), GL_UNSIGNED_INT, 0);
+    Texture::GetTexture(VoxelType::DIRT).Bind();
+    shader.SetInt("texture1", 0); // Set the sampler to use texture unit 0
+    glDrawArrays(GL_TRIANGLES, 0, vbo->GetCount());
+    Texture::GetTexture(VoxelType::DIRT).Unbind();
     vao.Unbind();
 }
 
