@@ -13,6 +13,7 @@ private:
     mat4 *view;
     vec3 cameraPos, cameraUp, cameraFront, cameraRight, cameraDirection, up;
     float pitch, yaw, roll;
+    float speed = 1.0f;
     Shader *shader;
 
     void updateCamera();
@@ -92,18 +93,23 @@ void Camera::updateCamera()
 
 void Camera::ProcessInput()
 {
+    if (Keyboard::keys[GLFW_KEY_LEFT_CONTROL])
+        speed = 10.0f;
+    else
+        speed = 5.0f;
+
     if (Keyboard::keys[GLFW_KEY_W])
-        SlideFront(0.01f);
+        SlideFront(0.01f * speed);
     if (Keyboard::keys[GLFW_KEY_S])
-        SlideFront(-0.01f);
+        SlideFront(-0.01f * speed);
     if (Keyboard::keys[GLFW_KEY_A])
-        SlideSide(0.01f);
+        SlideSide(0.01f * speed);
     if (Keyboard::keys[GLFW_KEY_D])
-        SlideSide(-0.01f);
+        SlideSide(-0.01f * speed);
     if (Keyboard::keys[GLFW_KEY_SPACE])
-        SlideUp(0.01f);
+        SlideUp(0.01f * speed);
     if (Keyboard::keys[GLFW_KEY_LEFT_SHIFT])
-        SlideUp(-0.01f);
+        SlideUp(-0.01f * speed);
     if (Mouse::delx)
         Yaw(Mouse::delx * 0.08);
     if (Mouse::dely)

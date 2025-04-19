@@ -29,13 +29,12 @@ public:
     {
         view = mat4(1.0f);
         camera.SetShader(&shader);
-        ChunkManager::InitChunkManager(camera.GetCameraPos(), 3);
+        ChunkManager::InitChunkManager(camera.GetCameraPos(), 8);
     };
 
 public:
     void ProcessInput() override
     {
-
         camera.ProcessInput();
         if (Keyboard::keys[GLFW_KEY_R])
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

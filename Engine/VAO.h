@@ -38,12 +38,12 @@ public:
         case BOType::VERTEX:
             glVertexAttribPointer(0, 3, GL_INT, GL_FALSE, sizeof(Vertex), (void *)0);
             glVertexAttribPointer(1, 3, GL_INT, GL_FALSE, sizeof(Vertex), (void *)(sizeof(int) * 3));
-            glVertexAttribPointer(2, 2, GL_INT, GL_FALSE, sizeof(Vertex), (void *)(sizeof(int) * 6));
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)(sizeof(int) * 6));
             break;
         case BOType::INT:
-            glVertexAttribIPointer(0, 3, GL_INT, sizeof(int), (void *)0);
-            glVertexAttribIPointer(1, 3, GL_INT, sizeof(int), (void *)(sizeof(int) * 3));
-            glVertexAttribIPointer(2, 2, GL_INT, sizeof(int), (void *)(sizeof(int) * 6));
+            glVertexAttribPointer(0, 3, GL_INT, GL_FALSE, 6 * sizeof(int) + 2 * sizeof(float), (void *)0);
+            glVertexAttribPointer(1, 3, GL_INT, GL_FALSE, 6 * sizeof(int) + 2 * sizeof(float), (void *)(sizeof(int) * 3));
+            glVertexAttribPointer(2, 2, GL_INT, GL_FALSE, 6 * sizeof(int) + 2 * sizeof(float), (void *)(sizeof(int) * 6));
             break;
         default:
             break;
