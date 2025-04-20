@@ -38,10 +38,18 @@ void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
     int count = 0;
     for (auto it = chunksToLoad.begin(); it != chunksToLoad.end() && count < 2;)
     {
-        int pos[3] = {(*it).x, (*it).y, (*it).z};
-        chunks.push_back(new Chunk(pos));
-        it = chunksToLoad.erase(it);
-        count++;
+        vec3 max = *it + vec3(Chunk::ChunkSize());
+        if (frustum.IsBoxInFrustum(*it, max))
+        {
+            int pos[3] = {(*it).x, (*it).y, (*it).z};
+            chunks.push_back(new Chunk(pos));
+            it = chunksToLoad.erase(it);
+            count++;
+        }
+        else
+        {
+            ++it;
+        }
     }
     for (Chunk *chunk : chunks)
     {

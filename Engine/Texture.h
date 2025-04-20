@@ -65,11 +65,11 @@ public:
     static void InitializeTextures()
     {
         Texture::RegisterTexture(VoxelType::BRICK, "./Resources/Textures/brick.jpg", 1, 0, 0, 0);
-        Texture::RegisterTexture(VoxelType::TREE, "./Resources/Textures/Textures.png", 4, 4, 2, 1);
-        Texture::RegisterTexture(VoxelType::POTION, "./Resources/Textures/Textures.png", 4, 4, 1, 2);
-        Texture::RegisterTexture(VoxelType::SWORD, "./Resources/Textures/Textures.png", 4, 4, 0, 2);
-        Texture::RegisterTexture(VoxelType::HEART, "./Resources/Textures/Textures.png", 4, 4, 1, 1);
-        Texture::RegisterTexture(VoxelType::JAR, "./Resources/Textures/Textures.png", 4, 4, 2, 0);
+        Texture::RegisterTexture(VoxelType::TREE, "./Resources/Textures/Textures.png", 4, 5, 2, 1);
+        Texture::RegisterTexture(VoxelType::POTION, "./Resources/Textures/Textures.png", 4, 5, 1, 2);
+        Texture::RegisterTexture(VoxelType::SWORD, "./Resources/Textures/Textures.png", 4, 5, 0, 2);
+        Texture::RegisterTexture(VoxelType::HEART, "./Resources/Textures/Textures.png", 4, 5, 1, 1);
+        Texture::RegisterTexture(VoxelType::JAR, "./Resources/Textures/Textures.png", 4, 5, 2, 0);
     }
 };
 
@@ -96,8 +96,8 @@ bool Texture::loadTexture(texture &tex)
 
     tex.Bind();
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 

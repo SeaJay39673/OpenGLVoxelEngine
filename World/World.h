@@ -2,8 +2,9 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-// #include <glad/glad.h>
-// #include <GLFW/glfw3.h>
+#include <chrono>
+#include <thread>
+#include <mutex>
 
 #include "../Game/Game.h"
 #include "../Engine/ChunkManager.h"
@@ -13,7 +14,8 @@
 #include "../IO/Mouse.h"
 #include "../IO/Keyboard.h"
 
-using std::string;
+using std::string, std::mutex, std::lock_guard;
+using namespace std::chrono;
 
 class World : Game
 {
@@ -23,6 +25,9 @@ private:
     Camera camera;
     Shader shader;
     Frustum frustum;
+    vector<function<void()>> updateFunctions;
+    mutex updateFunctionsMutex;
+    void update() override;
 
 public:
     World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&view)
@@ -32,14 +37,21 @@ public:
         ChunkManager::InitChunkManager(camera.GetCameraPos(), 8);
     };
 
-public:
-    void ProcessInput() override
+    void processInput() override
     {
         camera.ProcessInput();
         if (Keyboard::keys[GLFW_KEY_R])
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        {
+            lock_guard<mutex> lock(updateFunctionsMutex);
+            updateFunctions.push_back([]()
+                                      { glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); });
+        }
         if (Keyboard::keys[GLFW_KEY_F])
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        {
+            lock_guard<mutex> lock(updateFunctionsMutex);
+            updateFunctions.push_back([]()
+                                      { glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); });
+        }
         if (Keyboard::keys[GLFW_KEY_ESCAPE])
             _app->Shutdown();
         Mouse::delx = 0;
@@ -48,6 +60,12 @@ public:
 
     void Render() override
     {
+        lock_guard<mutex> lock(updateFunctionsMutex);
+        for (auto it = updateFunctions.begin(); it != updateFunctions.end();)
+        {
+            (*it)();
+            it = updateFunctions.erase(it);
+        }
         shader.Use();
         shader.SetMat4f("view", view);
         frustum.Update(shader.GetProjection(), view);
@@ -64,7 +82,32 @@ public:
                                         });
         shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight());
         _app->DisableCursor();
+        std::thread updateThread(&World::update, this);
+        updateThread.detach();
     };
 };
+
+void World::update()
+{
+    const int targetTPS = 60; // ticks per second
+    const milliseconds tickDuration(1000 / targetTPS);
+
+    auto previousTime = high_resolution_clock::now();
+
+    while (true)
+    {
+        auto currentTime = high_resolution_clock::now();
+        auto elapsedTime = duration_cast<milliseconds>(currentTime - previousTime);
+        if (elapsedTime >= tickDuration)
+        {
+            previousTime = currentTime;
+            processInput();
+        }
+        else
+        {
+            std::this_thread::sleep_for(tickDuration - elapsedTime);
+        }
+    }
+}
 
 #endif
