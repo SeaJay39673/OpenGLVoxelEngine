@@ -8,12 +8,14 @@ file (GLOB IMGUI_SOURCES
 add_executable(OpenWorld main.cpp ${IMGUI_SOURCES})
 
 set_property(TARGET OpenWorld PROPERTY CXX_STANDARD 17)
+# set(CMAKE_CXX_FLAGS_DEBUG "/MTd") # Static Debug Runtime
+# set(CMAKE_CXX_FLAGS_RELEASE "/MT") # Static Release Runtime
 
 set(RESOURCE_PATH "")
 if(WIN32)
   set(RESOURCE_PATH "$<IF:$<CONFIG:Debug>,Debug,Release>")
-  set(VCPKG_HOST_TRIPLET x64-windows-static)
-  set(VCPKG_TARGET_TRIPLET x64-windows-static)
+  # set(VCPKG_HOST_TRIPLET x64-windows-static)
+  # set(VCPKG_TARGET_TRIPLET x64-windows-static)
 endif()
 
 #############################################################
@@ -43,6 +45,14 @@ target_link_libraries(OpenWorld PRIVATE glm::glm)
 
 find_package(Stb REQUIRED)
 target_include_directories(OpenWorld PRIVATE ${Stb_INCLUDE_DIRS})
+
+target_compile_definitions(OpenWorld PRIVATE GLFW_DLL)
+
+add_custom_command(TARGET OpenWorld POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/bin/glfw3.dll"
+        $<TARGET_FILE_DIR:OpenWorld>
+)
 
 ################################################################
 # Set install paths so the installer can find required resources
