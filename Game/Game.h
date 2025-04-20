@@ -13,11 +13,11 @@ class Game
 {
 protected:
     App *_app = nullptr;
-    virtual void update() = 0;
-    virtual void processInput() = 0;
 
 public:
     virtual ~Game() {}
+    virtual void ProcessInput() = 0;
+    virtual void Update() = 0;
     virtual void Render() = 0;
     void SetApp(App *app) { _app = app; };
     virtual void Start() = 0;

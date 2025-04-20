@@ -20,7 +20,9 @@ private:
     VoxelType voxels[chunkSize][chunkSize][chunkSize];
     unordered_map<VoxelType, Mesh_TS *> meshMap;
     mutex loadedMutex;
+    mutex updatingMutex;
     bool loaded;
+    bool updating;
 
 public:
     Chunk_TS(int pos[3]);
@@ -28,11 +30,13 @@ public:
     void Render(Shader_TS &shader);
     static int ChunkSize() { return chunkSize; };
     int *Chunk_TS::GetPosition() { return position; }
-    void LoadChunk();
+    void LoadChunk(vec3 cameraPos);
     bool IsLoaded();
+    bool IsUpdating();
+    bool IsLoadedOrUpdating();
 };
 
-Chunk_TS::Chunk_TS(int pos[3]) : loaded(false)
+Chunk_TS::Chunk_TS(int pos[3]) : loaded(false), updating(false)
 {
     memcpy(position, pos, sizeof(position));
     for (int i = 0; i < chunkSize; i++)
@@ -55,8 +59,23 @@ bool Chunk_TS::IsLoaded()
     return loaded;
 }
 
-void Chunk_TS::LoadChunk()
+bool Chunk_TS::IsUpdating()
 {
+    lock_guard<mutex> lock(updatingMutex);
+    return updating;
+}
+
+bool Chunk_TS::IsLoadedOrUpdating()
+{
+    std::scoped_lock lock(loadedMutex, updatingMutex);
+    return loaded || updating;
+}
+
+void Chunk_TS::LoadChunk(vec3 cameraPos)
+{
+    std::scoped_lock lock(loadedMutex, updatingMutex);
+    loaded = false;
+    updating = true;
     for (int i = 0; i < chunkSize; i++)
     {
         for (int j = 0; j < chunkSize; j++)
@@ -65,20 +84,25 @@ void Chunk_TS::LoadChunk()
             {
                 if (voxels[i][j][k] != VoxelType::AIR)
                 {
-                    if (!i || !j || !k || i == chunkSize - 1 || j == chunkSize - 1 || k == chunkSize - 1)
-                    {
-                        meshMap[voxels[i][j][k]]->GenerateVoxel(i, j, k);
-                        continue;
-                    }
-                    if (voxels[i - 1][j][k] == VoxelType::AIR ||
-                        i + 1 < chunkSize && voxels[i + 1][j][k] == VoxelType::AIR ||
-                        voxels[i][j - 1][k] == VoxelType::AIR ||
-                        j + 1 < chunkSize && voxels[i][j + 1][k] == VoxelType::AIR ||
-                        voxels[i][j][k - 1] == VoxelType::AIR ||
-                        k + 1 < chunkSize && voxels[i][j][k + 1] == VoxelType::AIR)
-                    {
-                        meshMap[voxels[i][j][k]]->GenerateVoxel(i, j, k);
-                    }
+
+                    if (cameraPos.x < position[0] + i)
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Mesh_TS_Faces::LEFT);
+                    if (cameraPos.x < position[0] + i + 1)
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Mesh_TS_Faces::RIGHT);
+                    // if (!i || !j || !k || i == chunkSize - 1 || j == chunkSize - 1 || k == chunkSize - 1)
+                    // {
+                    //     meshMap[voxels[i][j][k]]->GenerateVoxel(i, j, k);
+                    //     continue;
+                    // }
+                    // if (voxels[i - 1][j][k] == VoxelType::AIR ||
+                    //     i + 1 < chunkSize && voxels[i + 1][j][k] == VoxelType::AIR ||
+                    //     voxels[i][j - 1][k] == VoxelType::AIR ||
+                    //     j + 1 < chunkSize && voxels[i][j + 1][k] == VoxelType::AIR ||
+                    //     voxels[i][j][k - 1] == VoxelType::AIR ||
+                    //     k + 1 < chunkSize && voxels[i][j][k + 1] == VoxelType::AIR)
+                    // {
+                    //     meshMap[voxels[i][j][k]]->GenerateVoxel(i, j, k);
+                    // }
                 }
             }
         }
@@ -89,7 +113,7 @@ void Chunk_TS::LoadChunk()
         pair.second->Done();
     }
 
-    lock_guard<mutex> lock(loadedMutex);
+    updating = false;
     loaded = true;
 }
 

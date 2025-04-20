@@ -10,7 +10,7 @@ using glm::vec3, glm::mat4;
 class Camera
 {
 private:
-    mat4 *view;
+    mat4 view;
     vec3 cameraPos, cameraUp, cameraFront, cameraRight, cameraDirection, up;
     float pitch, yaw, roll;
     float speed = 1.0f;
@@ -19,7 +19,7 @@ private:
     void updateCamera();
 
 public:
-    Camera(mat4 *view, vec3 up = vec3(0, 1, 0)) : view(view), up(up), yaw(-90), pitch(0), roll(0)
+    Camera(Shader *shader, vec3 up = vec3(0, 1, 0)) : shader(shader), view(1.f), up(up), yaw(-90), pitch(0), roll(0)
     {
         // Only used in setup
         vec3 cameraTarget = vec3(0, 0, -1); // Where the camera is looking at
@@ -34,7 +34,6 @@ public:
         updateCamera();
     }
 
-    void SetShader(Shader *shader) { this->shader = shader; }
     void SlideFront(float speed)
     {
         cameraPos += speed * cameraFront;
@@ -66,8 +65,9 @@ public:
     }
     void ProcessInput();
 
-    vec3 GetCameraPos() const { return cameraPos; }
-    vec3 GetCameraDirection() const { return cameraDirection; }
+    vec3 const GetCameraPos() const { return cameraPos; }
+    vec3 const GetCameraDirection() const { return cameraDirection; }
+    mat4 const GetCameraView() const { return view; }
 };
 
 void Camera::updateCamera()
@@ -82,7 +82,9 @@ void Camera::updateCamera()
     cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
     cameraFront = glm::normalize(cameraDirection);
 
-    *view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+    shader->SetMat4f("view", view);
 
     // Update shader information
     // if (shader != nullptr)

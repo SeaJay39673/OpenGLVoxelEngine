@@ -8,6 +8,11 @@
 #include "../IO_TS/Mouse_TS.h"
 #include "../IO_TS/Keyboard_TS.h"
 
+#include <chrono>
+#include <thread>
+
+using namespace std::chrono;
+
 class App : public Window
 {
 private:
@@ -51,12 +56,29 @@ public:
             cout << "No Game Loaded\n";
             return;
         }
+        const int targetTPS = 120; // ticks per second
+        const milliseconds tickDuration(1000 / targetTPS);
+
+        auto previousTime = high_resolution_clock::now();
+
         while (!ShouldClose())
         {
-            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            _game->Render();
-            NextFrame();
+            auto currentTime = high_resolution_clock::now();
+            auto elapsedTime = duration_cast<milliseconds>(currentTime - previousTime);
+            if (elapsedTime >= tickDuration)
+            {
+                previousTime = currentTime;
+                glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                _game->ProcessInput();
+                _game->Update();
+                _game->Render();
+                NextFrame();
+            }
+            else
+            {
+                std::this_thread::sleep_for(tickDuration - elapsedTime);
+            }
         }
         glfwTerminate();
     }

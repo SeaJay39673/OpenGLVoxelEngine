@@ -21,6 +21,9 @@ private:
     float speed = 1.0f;
     Shader_TS *shader;
 
+    mutex callbackMutex;
+    unordered_map<string, function<void(vec3, vec3)>> cameraCallbacks;
+
     void updateCamera();
 
 public:
@@ -38,6 +41,16 @@ public:
         cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
 
         updateCamera();
+    }
+
+    void RegisterCameraCallback(string name, function<void(vec3, vec3)> callback)
+    {
+        cameraCallbacks[name] = callback;
+    }
+
+    void DeregisterCameraCallback(string name)
+    {
+        cameraCallbacks.erase(name);
     }
 
     void SetView()
@@ -78,8 +91,8 @@ public:
     }
     void ProcessInput();
 
-    vec3 GetCameraPos() const { return cameraPos; }
-    vec3 GetCameraDirection() const { return cameraDirection; }
+    vec3 const GetCameraPos() const { return cameraPos; }
+    vec3 const GetCameraDirection() const { return cameraDirection; }
 };
 
 void Camera_TS::updateCamera()
@@ -96,6 +109,10 @@ void Camera_TS::updateCamera()
 
     lock_guard<mutex> lock(view.mut);
     *view.ptr = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+    lock_guard<mutex> callbackLock(callbackMutex);
+    for (auto &pair : cameraCallbacks)
+        pair.second(cameraPos, cameraDirection);
 
     // Update shader information
     // if (shader != nullptr)

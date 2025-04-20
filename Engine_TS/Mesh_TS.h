@@ -11,11 +11,21 @@ using std::mutex, std::lock_guard;
 
 using namespace Voxel;
 
+enum class Mesh_TS_Faces
+{
+    LEFT,
+    RIGHT,
+    TOP,
+    BOTTOM,
+    FRONT,
+    BACK
+};
+
 class Mesh_TS
 {
 private:
     VoxelType type;
-    VAO *vao;
+    VAO *vao = nullptr;
     BO *vbo = nullptr, *ebo = nullptr;
     int position[3];
     vector<Vertex> vertices;
@@ -30,8 +40,22 @@ public:
     }
     ~Mesh_TS()
     {
+        delete vao;
         delete vbo;
         delete ebo;
+    }
+
+    void Reset()
+    {
+        lock_guard<mutex> lock(loadedMutex);
+        loaded = false;
+        created = false;
+        delete vao;
+        delete vbo;
+        delete ebo;
+        vao = nullptr;
+        vbo = nullptr;
+        ebo = nullptr;
     }
 
     void Done()
@@ -81,8 +105,13 @@ public:
         vao->Unbind();
     }
 
-    void GenerateVoxel(int i, int j, int k)
+    void GenerateFace(int i, int j, int k, Mesh_TS_Faces face)
     {
+
+        if (vao != nullptr)
+        {
+            Reset();
+        }
         // Define the 8 corner positions of the cube relative to the voxel's position
         int positions[8][3] = {
             {i + position[0], j + position[1], k + position[2]},             // bottom left
@@ -109,55 +138,67 @@ public:
         float texCoords[4][2];
         memcpy(texCoords, Texture::GetTexture(type).texCoords, sizeof(texCoords));
 
-        // Generate vertices for each face of the cube
+        switch (face)
+        {
+        case Mesh_TS_Faces::FRONT:
+            // Front face (CCW)
+            vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
+            vertices.push_back(Vertex(positions[1], normals[0], texCoords[1]));
+            vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
+            vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
+            vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
+            vertices.push_back(Vertex(positions[3], normals[0], texCoords[3]));
+        case Mesh_TS_Faces::BACK:
+            // Back face (CCW)
+            vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
+            vertices.push_back(Vertex(positions[6], normals[1], texCoords[1]));
+            vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
+            vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
+            vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
+            vertices.push_back(Vertex(positions[4], normals[1], texCoords[3]));
+        case Mesh_TS_Faces::LEFT:
+            // Left face (CCW)
+            vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
+            vertices.push_back(Vertex(positions[5], normals[2], texCoords[1]));
+            vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
+            vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
+            vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
+            vertices.push_back(Vertex(positions[0], normals[2], texCoords[3]));
+        case Mesh_TS_Faces::RIGHT:
+            // Right face (CCW)
+            vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
+            vertices.push_back(Vertex(positions[2], normals[3], texCoords[1]));
+            vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
+            vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
+            vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
+            vertices.push_back(Vertex(positions[7], normals[3], texCoords[3]));
+        case Mesh_TS_Faces::TOP:
+            // Top face (CCW)
+            vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
+            vertices.push_back(Vertex(positions[5], normals[4], texCoords[1]));
+            vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
+            vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
+            vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
+            vertices.push_back(Vertex(positions[2], normals[4], texCoords[3]));
+        case Mesh_TS_Faces::BOTTOM:
+            // Bottom face (CCW) - FIXED
+            vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
+            vertices.push_back(Vertex(positions[0], normals[5], texCoords[1]));
+            vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
+            vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
+            vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
+            vertices.push_back(Vertex(positions[7], normals[5], texCoords[3]));
+        }
+    }
 
-        // Front face (CCW)
-        vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
-        vertices.push_back(Vertex(positions[1], normals[0], texCoords[1]));
-        vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
-        vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
-        vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
-        vertices.push_back(Vertex(positions[3], normals[0], texCoords[3]));
-
-        // Back face (CCW)
-        vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
-        vertices.push_back(Vertex(positions[6], normals[1], texCoords[1]));
-        vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
-        vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
-        vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
-        vertices.push_back(Vertex(positions[4], normals[1], texCoords[3]));
-
-        // Left face (CCW)
-        vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
-        vertices.push_back(Vertex(positions[5], normals[2], texCoords[1]));
-        vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
-        vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
-        vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
-        vertices.push_back(Vertex(positions[0], normals[2], texCoords[3]));
-
-        // Right face (CCW)
-        vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
-        vertices.push_back(Vertex(positions[2], normals[3], texCoords[1]));
-        vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
-        vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
-        vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
-        vertices.push_back(Vertex(positions[7], normals[3], texCoords[3]));
-
-        // Top face (CCW)
-        vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
-        vertices.push_back(Vertex(positions[5], normals[4], texCoords[1]));
-        vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
-        vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
-        vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
-        vertices.push_back(Vertex(positions[2], normals[4], texCoords[3]));
-
-        // Bottom face (CCW) - FIXED
-        vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
-        vertices.push_back(Vertex(positions[0], normals[5], texCoords[1]));
-        vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
-        vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
-        vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
-        vertices.push_back(Vertex(positions[7], normals[5], texCoords[3]));
+    void GenerateVoxel(int i, int j, int k)
+    {
+        GenerateFace(i, j, k, Mesh_TS_Faces::LEFT);
+        GenerateFace(i, j, k, Mesh_TS_Faces::RIGHT);
+        GenerateFace(i, j, k, Mesh_TS_Faces::TOP);
+        GenerateFace(i, j, k, Mesh_TS_Faces::BOTTOM);
+        GenerateFace(i, j, k, Mesh_TS_Faces::FRONT);
+        GenerateFace(i, j, k, Mesh_TS_Faces::BACK);
     }
 };
 

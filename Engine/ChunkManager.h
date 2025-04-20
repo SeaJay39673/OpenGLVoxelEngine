@@ -20,6 +20,7 @@ public:
 
     static void SetRenderDistance(int distance) { renderDistance = distance; }
     static int GetRenderDistance() { return renderDistance; }
+    static void UpdateChunks(const Frustum &frustum, const vec3 cameraPos);
     static void RenderChunks(Shader &shader, const Frustum &frustum);
 
 private:
@@ -35,22 +36,6 @@ vector<vec3> ChunkManager::chunksToLoad;
 
 void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
 {
-    int count = 0;
-    for (auto it = chunksToLoad.begin(); it != chunksToLoad.end() && count < 2;)
-    {
-        vec3 max = *it + vec3(Chunk::ChunkSize());
-        if (frustum.IsBoxInFrustum(*it, max))
-        {
-            int pos[3] = {(*it).x, (*it).y, (*it).z};
-            chunks.push_back(new Chunk(pos));
-            it = chunksToLoad.erase(it);
-            count++;
-        }
-        else
-        {
-            ++it;
-        }
-    }
     for (Chunk *chunk : chunks)
     {
         // Calculate the bounding box of the chunk
@@ -61,6 +46,26 @@ void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
         if (frustum.IsBoxInFrustum(min, max))
         {
             chunk->Render(shader);
+        }
+    }
+}
+
+void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 cameraPos)
+{
+    int count = 0;
+    for (auto it = chunksToLoad.begin(); it != chunksToLoad.end() && count < 2;)
+    {
+        vec3 max = *it + vec3(Chunk::ChunkSize());
+        if (frustum.IsBoxInFrustum(*it, max))
+        {
+            int pos[3] = {(*it).x, (*it).y, (*it).z};
+            chunks.push_back(new Chunk(pos, cameraPos));
+            it = chunksToLoad.erase(it);
+            count++;
+        }
+        else
+        {
+            ++it;
         }
     }
 }

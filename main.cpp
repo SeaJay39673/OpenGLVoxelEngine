@@ -7,7 +7,7 @@
 int main(int, char **)
 {
     App app;
-    World_TS world;
+    World world;
     app.LoadGame((Game *)&world);
     app.Run();
 }

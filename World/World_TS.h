@@ -23,8 +23,6 @@ class World_TS : Game
 {
 private:
     Shader_TS shader;
-    void update() override;
-    void processInput() override;
     bool processingInput = false;
     mutex updateFunctionMutex;
     vector<function<void()>> updateFunctions;
@@ -33,11 +31,20 @@ private:
     Chunk_TS *chunk;
 
 public:
+    void Update() override;
+    void ProcessInput() override;
     World_TS() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&shader)
     {
         Texture::InitializeTextures();
         int pos[3] = {-8, -8, -45};
         chunk = new Chunk_TS(pos);
+        // camera.RegisterCameraCallback("UpdateChunks",
+        //                               [this](vec3 cameraPos, vec3 cameraDir)
+        //                               {
+        //                                   std::thread([this, cameraPos]()
+        //                                               { chunk->LoadChunk(cameraPos); })
+        //                                       .detach();
+        //                               });
     };
     void Render() override;
     void Start() override;
@@ -53,9 +60,9 @@ void World_TS::Start()
                                     });
     shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight());
     _app->DisableCursor();
-    std::thread updateThread(&World_TS::update, this);
+    std::thread updateThread(&World_TS::Update, this);
     updateThread.detach();
-    std::thread inputThread(&World_TS::processInput, this);
+    std::thread inputThread(&World_TS::ProcessInput, this);
     inputThread.detach();
 }
 
@@ -71,7 +78,7 @@ void World_TS::Render()
     chunk->Render(shader);
 }
 
-void World_TS::update()
+void World_TS::Update()
 {
     const int targetTPS = 60; // ticks per second
     const milliseconds tickDuration(1000 / targetTPS);
@@ -85,10 +92,10 @@ void World_TS::update()
         if (elapsedTime >= tickDuration)
         {
             previousTime = currentTime;
-            if (!chunk->IsLoaded())
+            if (!chunk->IsLoadedOrUpdating())
             {
                 cout << "Loading Chunk\n";
-                chunk->LoadChunk();
+                chunk->LoadChunk(camera.GetCameraPos());
                 cout << "Chunk Loaded\n";
             }
         }
@@ -99,7 +106,7 @@ void World_TS::update()
     }
 }
 
-void World_TS::processInput()
+void World_TS::ProcessInput()
 {
     const int targetTPS = 60; // ticks per second
     const milliseconds tickDuration(1000 / targetTPS);

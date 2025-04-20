@@ -16,7 +16,7 @@ class Shader
 {
 private:
     unsigned int _id;
-    mat4 projection = mat4(1.0f);
+    mat4 projection;
     bool loadShaderCode(const string &path, string &code);
     bool compileShaderCode(const string code, unsigned int &id, bool isVertex = true);
 
@@ -43,7 +43,7 @@ public:
         glUniform1i(glGetUniformLocation(_id, name.c_str()), value);
     }
 
-    mat4 GetProjection() { return projection; };
+    mat4 const GetProjection() const { return projection; };
 };
 
 bool Shader::loadShaderCode(const string &path, string &code)
@@ -94,7 +94,7 @@ bool Shader::compileShaderCode(const string code, unsigned int &id, bool isVerte
     return success;
 }
 
-Shader::Shader(const string &vertexPath, const string &fragmentPath)
+Shader::Shader(const string &vertexPath, const string &fragmentPath) : projection(mat4(1.0f))
 {
     string code;
     unsigned int vert, frag;

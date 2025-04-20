@@ -22,17 +22,17 @@ private:
     int position[3];
     VoxelType voxels[chunkSize][chunkSize][chunkSize];
     unordered_map<VoxelType, Mesh *> meshMap;
-    void loadChunk();
+    void loadChunk(vec3 cameraPos);
 
 public:
-    Chunk(int pos[3]);
+    Chunk(int pos[3], vec3 cameraPos);
     ~Chunk() {};
     void Render(Shader &shader);
     static int ChunkSize() { return chunkSize; };
     int *Chunk::GetPosition() { return position; }
 };
 
-Chunk::Chunk(int pos[3])
+Chunk::Chunk(int pos[3], vec3 cameraPos)
 {
     memcpy(position, pos, sizeof(position));
     for (int i = 0; i < chunkSize; i++)
@@ -47,10 +47,10 @@ Chunk::Chunk(int pos[3])
                     meshMap[type] = new Mesh(type, position);
                 }
             }
-    loadChunk();
+    loadChunk(cameraPos);
 }
 
-void Chunk::loadChunk()
+void Chunk::loadChunk(vec3 cameraPos)
 {
     vector<Vertex> vertices;
 
