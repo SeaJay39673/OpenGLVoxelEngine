@@ -59,7 +59,7 @@ void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 cameraPos)
         if (frustum.IsBoxInFrustum(*it, max))
         {
             int pos[3] = {(*it).x, (*it).y, (*it).z};
-            chunks.push_back(new Chunk(pos, cameraPos));
+            chunks.push_back(new Chunk(pos));
             it = chunksToLoad.erase(it);
             count++;
         }

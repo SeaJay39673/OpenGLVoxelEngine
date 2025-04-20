@@ -22,17 +22,17 @@ private:
     int position[3];
     VoxelType voxels[chunkSize][chunkSize][chunkSize];
     unordered_map<VoxelType, Mesh *> meshMap;
-    void loadChunk(vec3 cameraPos);
+    void loadChunk();
 
 public:
-    Chunk(int pos[3], vec3 cameraPos);
+    Chunk(int pos[3]);
     ~Chunk() {};
     void Render(Shader &shader);
     static int ChunkSize() { return chunkSize; };
     int *Chunk::GetPosition() { return position; }
 };
 
-Chunk::Chunk(int pos[3], vec3 cameraPos)
+Chunk::Chunk(int pos[3])
 {
     memcpy(position, pos, sizeof(position));
     for (int i = 0; i < chunkSize; i++)
@@ -41,16 +41,17 @@ Chunk::Chunk(int pos[3], vec3 cameraPos)
             {
 
                 VoxelType type = GetRandomVoxel();
+                // VoxelType type = VoxelType::BRICK;
                 voxels[i][j][k] = type;
                 if (type != VoxelType::AIR && meshMap.find(type) == meshMap.end())
                 {
                     meshMap[type] = new Mesh(type, position);
                 }
             }
-    loadChunk(cameraPos);
+    loadChunk();
 }
 
-void Chunk::loadChunk(vec3 cameraPos)
+void Chunk::loadChunk()
 {
     vector<Vertex> vertices;
 
@@ -63,19 +64,30 @@ void Chunk::loadChunk(vec3 cameraPos)
             {
                 if (voxels[i][j][k] != VoxelType::AIR)
                 {
-                    if (!i || !j || !k || i == chunkSize - 1 || j == chunkSize - 1 || k == chunkSize - 1)
+                    // Check each face of the voxel and only generate it if it's visible
+                    if (i == 0 || voxels[i - 1][j][k] == VoxelType::AIR) // Left face
                     {
-                        meshMap[voxels[i][j][k]]->GenerateVoxel(i, j, k);
-                        continue;
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::LEFT);
                     }
-                    if (voxels[i - 1][j][k] == VoxelType::AIR ||
-                        i + 1 < chunkSize && voxels[i + 1][j][k] == VoxelType::AIR ||
-                        voxels[i][j - 1][k] == VoxelType::AIR ||
-                        j + 1 < chunkSize && voxels[i][j + 1][k] == VoxelType::AIR ||
-                        voxels[i][j][k - 1] == VoxelType::AIR ||
-                        k + 1 < chunkSize && voxels[i][j][k + 1] == VoxelType::AIR)
+                    if (i == chunkSize - 1 || voxels[i + 1][j][k] == VoxelType::AIR) // Right face
                     {
-                        meshMap[voxels[i][j][k]]->GenerateVoxel(i, j, k);
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::RIGHT);
+                    }
+                    if (j == 0 || voxels[i][j - 1][k] == VoxelType::AIR) // Bottom face
+                    {
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::BOTTOM);
+                    }
+                    if (j == chunkSize - 1 || voxels[i][j + 1][k] == VoxelType::AIR) // Top face
+                    {
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::TOP);
+                    }
+                    if (k == 0 || voxels[i][j][k - 1] == VoxelType::AIR) // Back face
+                    {
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::BACK);
+                    }
+                    if (k == chunkSize - 1 || voxels[i][j][k + 1] == VoxelType::AIR) // Front face
+                    {
+                        meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::FRONT);
                     }
                 }
             }
