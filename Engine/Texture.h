@@ -8,7 +8,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include "Chunk.h"
 #include "Voxel.h"
 
 using std::string, std::unordered_map, Voxel::VoxelType;

@@ -1,11 +1,10 @@
 #pragma once
-#ifndef CHUNK_H
-#define CHUNK_H
+#ifndef CHUNK_TS_H
+#define CHUNK_TS_H
 
-#include "VAO.h"
-#include "Shader.h"
-#include "Mesh.h"
-#include "Voxel.h"
+#include "../Engine/VAO.h"
+#include "Shader_TS.h"
+#include "Mesh_TS.h"
 
 #include <vector>
 
@@ -13,26 +12,27 @@
 
 using std::vector, glm::vec3, glm::vec2, glm::mat4;
 
-using namespace Voxel;
-
-class Chunk
+class Chunk_TS
 {
 private:
     const static int chunkSize = 16;
     int position[3];
     VoxelType voxels[chunkSize][chunkSize][chunkSize];
-    unordered_map<VoxelType, Mesh *> meshMap;
-    void loadChunk();
+    unordered_map<VoxelType, Mesh_TS *> meshMap;
+    mutex loadedMutex;
+    bool loaded;
 
 public:
-    Chunk(int pos[3]);
-    ~Chunk() {};
-    void Render(Shader &shader);
+    Chunk_TS(int pos[3]);
+    ~Chunk_TS() {};
+    void Render(Shader_TS &shader);
     static int ChunkSize() { return chunkSize; };
-    int *Chunk::GetPosition() { return position; }
+    int *Chunk_TS::GetPosition() { return position; }
+    void LoadChunk();
+    bool IsLoaded();
 };
 
-Chunk::Chunk(int pos[3])
+Chunk_TS::Chunk_TS(int pos[3]) : loaded(false)
 {
     memcpy(position, pos, sizeof(position));
     for (int i = 0; i < chunkSize; i++)
@@ -44,17 +44,19 @@ Chunk::Chunk(int pos[3])
                 voxels[i][j][k] = type;
                 if (type != VoxelType::AIR && meshMap.find(type) == meshMap.end())
                 {
-                    meshMap[type] = new Mesh(type, position);
+                    meshMap[type] = new Mesh_TS(type, position);
                 }
             }
-    loadChunk();
 }
 
-void Chunk::loadChunk()
+bool Chunk_TS::IsLoaded()
 {
-    vector<Vertex> vertices;
+    lock_guard<mutex> lock(loadedMutex);
+    return loaded;
+}
 
-    unsigned int offset = 0;
+void Chunk_TS::LoadChunk()
+{
     for (int i = 0; i < chunkSize; i++)
     {
         for (int j = 0; j < chunkSize; j++)
@@ -84,13 +86,17 @@ void Chunk::loadChunk()
 
     for (auto &pair : meshMap)
     {
-        pair.second->CreateMesh();
+        pair.second->Done();
     }
+
+    lock_guard<mutex> lock(loadedMutex);
+    loaded = true;
 }
 
-void Chunk::Render(Shader &shader)
+void Chunk_TS::Render(Shader_TS &shader)
 {
-
+    if (!IsLoaded())
+        return;
     for (auto &pair : meshMap)
     {
         pair.second->Render(shader);

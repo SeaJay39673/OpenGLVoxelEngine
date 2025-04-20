@@ -1,4 +1,3 @@
-#pragma once
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
@@ -15,6 +14,7 @@ namespace Keyboard
         else if (action == GLFW_RELEASE)
             keys[key] = false;
     }
+
 };
 
 #endif

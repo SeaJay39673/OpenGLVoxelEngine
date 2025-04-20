@@ -1,58 +1,84 @@
-#ifndef MESH_H
-#define MESH_H
+#ifndef MESH_TS_H
+#define MESH_TS_H
 
-#include "VAO.h"
-#include "Shader.h"
-#include "Texture.h"
-#include "Voxel.h"
+#include "../Engine/VAO.h"
+#include "Shader_TS.h"
+#include "../Engine/Texture.h"
+
+#include <mutex>
+
+using std::mutex, std::lock_guard;
 
 using namespace Voxel;
 
-class Mesh
+class Mesh_TS
 {
 private:
     VoxelType type;
-    VAO vao;
+    VAO *vao;
     BO *vbo = nullptr, *ebo = nullptr;
     int position[3];
     vector<Vertex> vertices;
+    mutex loadedMutex;
+    bool loaded;
+    bool created;
 
 public:
-    Mesh(VoxelType type, int pos[3]) : type(type)
+    Mesh_TS(VoxelType type, int pos[3]) : type(type), loaded(false), created(false)
     {
         memcpy(position, pos, sizeof(position));
     }
-    ~Mesh()
+    ~Mesh_TS()
     {
         delete vbo;
         delete ebo;
     }
 
+    void Done()
+    {
+        lock_guard<mutex> lock(loadedMutex);
+        loaded = true;
+    }
+
+    bool IsDone()
+    {
+        lock_guard<mutex> lock(loadedMutex);
+        return loaded;
+    }
+
     void CreateMesh()
     {
+        cout << "Creating Mesh\n";
         if (vertices.empty())
         {
             std::cerr << "Vertices Empty, Can't create mesh\n";
             return;
         }
-        vao.Bind();
+        vao = new VAO;
+        vao->Bind();
         vbo = new BO(vertices);
         // ebo = new BO(indices);
-        vao.LinkBO(*vbo);
+        vao->LinkBO(*vbo);
         vbo->Unbind();
-        vao.Unbind();
+        vao->Unbind();
         // ebo->Unbind();
+        created = true;
+        cout << "Mesh Created\n";
     }
 
-    void Render(Shader &shader)
+    void Render(Shader_TS &shader)
     {
+        if (!IsDone())
+            return;
+        if (!created)
+            CreateMesh();
         shader.Use();
-        vao.Bind();
+        vao->Bind();
         Texture::GetTexture(type).Bind();
         shader.SetInt("texture1", 0); // Set the sampler to use texture unit 0
         glDrawArrays(GL_TRIANGLES, 0, vbo->GetCount());
         Texture::GetTexture(type).Unbind();
-        vao.Unbind();
+        vao->Unbind();
     }
 
     void GenerateVoxel(int i, int j, int k)

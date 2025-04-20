@@ -5,6 +5,8 @@
 #include "../Game/Game.h"
 #include "../IO/Mouse.h"
 #include "../IO/Keyboard.h"
+#include "../IO_TS/Mouse_TS.h"
+#include "../IO_TS/Keyboard_TS.h"
 
 class App : public Window
 {
@@ -24,6 +26,16 @@ public:
                             [](int key, int scancode, int action, int mods)
                             {
                                 Keyboard::KeyboardCallback(key, scancode, action, mods);
+                            });
+        RegisterMouseCallback("Mouse_TS",
+                              [](double x, double y)
+                              {
+                                  Mouse_TS::MouseCallback(x, y);
+                              });
+        RegisterKeyCallback("Keyboard_TS",
+                            [](int key, int scancode, int action, int mods)
+                            {
+                                Keyboard_TS::KeyboardCallback(key, scancode, action, mods);
                             });
     }
     void LoadGame(Game *game)
