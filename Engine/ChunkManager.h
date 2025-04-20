@@ -20,7 +20,7 @@ public:
 
     static void SetRenderDistance(int distance) { renderDistance = distance; }
     static int GetRenderDistance() { return renderDistance; }
-    static void UpdateChunks(const Frustum &frustum, const vec3 cameraPos);
+    static void UpdateChunks(const Frustum &frustum);
     static void RenderChunks(Shader &shader, const Frustum &frustum);
 
 private:
@@ -50,7 +50,7 @@ void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
     }
 }
 
-void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 cameraPos)
+void ChunkManager::UpdateChunks(const Frustum &frustum)
 {
     int count = 0;
     for (auto it = chunksToLoad.begin(); it != chunksToLoad.end() && count < 2;)

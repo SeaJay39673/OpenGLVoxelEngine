@@ -48,7 +48,7 @@ void World::ProcessInput()
 void World::Update()
 {
     frustum.Update(shader.GetProjection(), camera.GetCameraView());
-    ChunkManager::UpdateChunks(frustum, camera.GetCameraPos());
+    ChunkManager::UpdateChunks(frustum);
 }
 
 void World::Render()
