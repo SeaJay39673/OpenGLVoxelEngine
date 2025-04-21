@@ -32,7 +32,7 @@ public:
     ~Chunk() {};
     void Render(Shader &shader);
     static const int ChunkSize() { return chunkSize; };
-    int *Chunk::GetPosition() { return position; }
+    int *GetPosition() { return position; }
 };
 
 Chunk::Chunk(int pos[3])

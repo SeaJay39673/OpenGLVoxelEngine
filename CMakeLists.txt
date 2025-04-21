@@ -7,7 +7,7 @@ file (GLOB IMGUI_SOURCES
 
 add_executable(OpenWorld main.cpp ${IMGUI_SOURCES})
 
-set_property(TARGET OpenWorld PROPERTY CXX_STANDARD 17)
+set_property(TARGET OpenWorld PROPERTY CXX_STANDARD 20)
 # set(CMAKE_CXX_FLAGS_DEBUG "/MTd") # Static Debug Runtime
 # set(CMAKE_CXX_FLAGS_RELEASE "/MT") # Static Release Runtime
 
