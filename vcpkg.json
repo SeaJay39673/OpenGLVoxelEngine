@@ -4,7 +4,6 @@
     "glfw3",
     "glm",
     "opengl",
-    "stb",
-    "libnoise"
+    "stb"
   ]
 }

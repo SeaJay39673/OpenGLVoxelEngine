@@ -12,11 +12,18 @@ namespace Voxel
     {
         AIR,
         BRICK,
+        BRICK_RED,
+        BLOCK,
+        EYE,
+        BLOOD,
+        WOOD,
+        WATER,
         TREE,
         POTION,
         SWORD,
         HEART,
         JAR,
+
         COUNT // Add COUNT as the last element
     };
     constexpr int VoxelTypeCount = static_cast<int>(VoxelType::COUNT);

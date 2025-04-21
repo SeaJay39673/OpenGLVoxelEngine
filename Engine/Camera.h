@@ -113,9 +113,9 @@ void Camera::ProcessInput()
     if (Keyboard::keys[GLFW_KEY_LEFT_SHIFT])
         SlideUp(-0.01f * speed);
     if (Mouse::delx)
-        Yaw(Mouse::delx * 0.08);
+        Yaw((float)(Mouse::delx * 0.08));
     if (Mouse::dely)
-        Pitch(-Mouse::dely * 0.08);
+        Pitch((float)(-Mouse::dely * 0.08));
 }
 
 #endif

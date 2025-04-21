@@ -38,12 +38,20 @@ public:
         glUniformMatrix4fv(glGetUniformLocation(_id, name.c_str()), 1, GL_FALSE, value_ptr(mat));
     };
 
-    void Shader::SetInt(const std::string &name, int value)
+    void SetInt(const std::string &name, int value)
     {
         glUniform1i(glGetUniformLocation(_id, name.c_str()), value);
     }
 
-    mat4 const GetProjection() const { return projection; };
+    void SetFloat(const string &name, float value)
+    {
+        glUniform1f(glGetUniformLocation(_id, name.c_str()), value);
+    }
+
+    mat4 const GetProjection() const
+    {
+        return projection;
+    };
 };
 
 bool Shader::loadShaderCode(const string &path, string &code)

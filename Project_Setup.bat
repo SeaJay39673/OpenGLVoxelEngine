@@ -31,4 +31,8 @@ IF NOT EXIST .\vcpkg\NUL (echo "Cloning vcpkg submodule" && git clone https://gi
 
 IF NOT EXIST .\vcpkg\NUL (echo "ERROR::VCPKG: Error cloning submodule")
 
+IF NOT EXIST .\Perlin\NUL (echo "Cloning Perlin Noise submodule" && git clone https://github.com/Reputeless/PerlinNoise.git Perlin)
+
+IF NOT EXIST .\Perlin\NUL (echo "ERROR::PERLIN: Error cloning submodule")
+
 echo "Setup Complete"

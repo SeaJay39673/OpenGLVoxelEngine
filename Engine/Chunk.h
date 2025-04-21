@@ -9,11 +9,14 @@
 
 #include <vector>
 
+#include "Generator.h"
+
 #include <glm/glm.hpp>
 
 using std::vector, glm::vec3, glm::vec2, glm::mat4;
 
 using namespace Voxel;
+using namespace Generator;
 
 class Chunk
 {
@@ -28,7 +31,7 @@ public:
     Chunk(int pos[3]);
     ~Chunk() {};
     void Render(Shader &shader);
-    static int ChunkSize() { return chunkSize; };
+    static const int ChunkSize() { return chunkSize; };
     int *Chunk::GetPosition() { return position; }
 };
 
@@ -38,14 +41,47 @@ Chunk::Chunk(int pos[3])
     for (int i = 0; i < chunkSize; i++)
         for (int j = 0; j < chunkSize; j++)
             for (int k = 0; k < chunkSize; k++)
-            {
+                voxels[i][j][k] = VoxelType::AIR;
 
-                VoxelType type = GetRandomVoxel();
-                // VoxelType type = VoxelType::BRICK;
-                voxels[i][j][k] = type;
-                if (type != VoxelType::AIR && meshMap.find(type) == meshMap.end())
+    for (int i = 0; i < chunkSize; i++)     // X
+        for (int j = 0; j < chunkSize; j++) // Z
+        {
+            double noiseValue = Noise2D_01((float)(position[0] + i), (float)(position[2] + j));
+            int height = (int)(noiseValue * MaxHeight * chunkSize);
+            for (int k = 0; k < chunkSize; k++) // Y
+            {
+                int y = (k + pos[1]);
+                if (y < height)
                 {
-                    meshMap[type] = new Mesh(type, position);
+                    VoxelType type = VoxelType::AIR;
+                    noiseValue = Noise3D_01((float)position[0] + i, (float)position[1] + k, (float)position[2] + j);
+                    if (noiseValue > .7)
+                        type = VoxelType::BRICK;
+                    else if (noiseValue > .6)
+                        type = VoxelType::BRICK_RED;
+                    else if (noiseValue > .58)
+                        type = VoxelType::EYE;
+                    else
+                        type = VoxelType::WOOD;
+
+                    voxels[i][k][j] = type;
+                    if (meshMap.find(type) == meshMap.end())
+                    {
+                        meshMap[type] = new Mesh(type, position);
+                    }
+                }
+            }
+        }
+    for (int i = 0; i < chunkSize; i++)
+        for (int j = 0; j < chunkSize; j++)
+            for (int k = 0; k < chunkSize; k++)
+            {
+                int y = (j + pos[1]);
+                if (y < 30 && voxels[i][j][k] == VoxelType::AIR)
+                {
+                    voxels[i][j][k] = VoxelType::WATER;
+                    if (meshMap.find(VoxelType::WATER) == meshMap.end())
+                        meshMap[VoxelType::WATER] = new Mesh(VoxelType::WATER, position);
                 }
             }
     loadChunk();
@@ -53,39 +89,36 @@ Chunk::Chunk(int pos[3])
 
 void Chunk::loadChunk()
 {
-    vector<Vertex> vertices;
-
-    unsigned int offset = 0;
-    for (int i = 0; i < chunkSize; i++)
+    for (int i = 0; i < chunkSize; i++) // x
     {
-        for (int j = 0; j < chunkSize; j++)
+        for (int j = 0; j < chunkSize; j++) // z
         {
             for (int k = 0; k < chunkSize; k++)
             {
                 if (voxels[i][j][k] != VoxelType::AIR)
                 {
                     // Check each face of the voxel and only generate it if it's visible
-                    if (i == 0 || voxels[i - 1][j][k] == VoxelType::AIR) // Left face
+                    if (i == 0 || voxels[i - 1][j][k] == VoxelType::AIR || voxels[i - 1][j][k] == VoxelType::WATER) // Left face
                     {
                         meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::LEFT);
                     }
-                    if (i == chunkSize - 1 || voxels[i + 1][j][k] == VoxelType::AIR) // Right face
+                    if (i == chunkSize - 1 || voxels[i + 1][j][k] == VoxelType::AIR || voxels[i + 1][j][k] == VoxelType::WATER) // Right face
                     {
                         meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::RIGHT);
                     }
-                    if (j == 0 || voxels[i][j - 1][k] == VoxelType::AIR) // Bottom face
+                    if (j == 0 || voxels[i][j - 1][k] == VoxelType::AIR || voxels[i][j - 1][k] == VoxelType::WATER) // Bottom face
                     {
                         meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::BOTTOM);
                     }
-                    if (j == chunkSize - 1 || voxels[i][j + 1][k] == VoxelType::AIR) // Top face
+                    if (j == chunkSize - 1 || voxels[i][j + 1][k] == VoxelType::AIR || voxels[i][j + 1][k] == VoxelType::WATER) // Top face
                     {
                         meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::TOP);
                     }
-                    if (k == 0 || voxels[i][j][k - 1] == VoxelType::AIR) // Back face
+                    if (k == 0 || voxels[i][j][k - 1] == VoxelType::AIR || voxels[i][j][k - 1] == VoxelType::WATER) // Back face
                     {
                         meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::BACK);
                     }
-                    if (k == chunkSize - 1 || voxels[i][j][k + 1] == VoxelType::AIR) // Front face
+                    if (k == chunkSize - 1 || voxels[i][j][k + 1] == VoxelType::AIR || voxels[i][j][k + 1] == VoxelType::WATER) // Front face
                     {
                         meshMap[voxels[i][j][k]]->GenerateFace(i, j, k, Face::FRONT);
                     }
@@ -94,9 +127,18 @@ void Chunk::loadChunk()
         }
     }
 
+    vector<VoxelType> keys;
+
     for (auto &pair : meshMap)
     {
-        pair.second->CreateMesh();
+        if (pair.second->Vertices() > 0)
+            pair.second->CreateMesh();
+        else
+            keys.push_back(pair.first);
+    }
+    for (auto it = keys.begin(); it != keys.end();)
+    {
+        it = keys.erase(it);
     }
 }
 

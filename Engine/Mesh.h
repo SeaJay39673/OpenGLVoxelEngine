@@ -38,6 +38,13 @@ public:
         delete ebo;
     }
 
+    unsigned int Vertices() const
+    {
+        if (vbo != nullptr)
+            return vbo->GetCount();
+        return -1;
+    }
+
     void CreateMesh()
     {
         if (vertices.empty())
@@ -56,6 +63,12 @@ public:
 
     void Render(Shader &shader)
     {
+        if (vbo == nullptr)
+            return;
+        if (type == VoxelType::WATER)
+            shader.SetFloat("TexOpacity", .5);
+        else
+            shader.SetFloat("TexOpacity", 1);
         shader.Use();
         vao.Bind();
         Texture::GetTexture(type).Bind();

@@ -142,9 +142,9 @@ void Camera_TS::ProcessInput()
         SlideUp(-0.01f * speed);
     const double *del = Mouse_TS::GetMouseDeltas();
     if (del[0])
-        Yaw(del[0] * 0.08);
+        Yaw((float)(del[0] * 0.08));
     if (del[1])
-        Pitch(-del[1] * 0.08);
+        Pitch((float)(-del[1] * 0.08));
     double temp[2] = {0, 0};
 }
 

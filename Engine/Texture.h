@@ -63,12 +63,19 @@ public:
     }
     static void InitializeTextures()
     {
-        Texture::RegisterTexture(VoxelType::BRICK, "./Resources/Textures/brick.jpg", 1, 0, 0, 0);
-        Texture::RegisterTexture(VoxelType::TREE, "./Resources/Textures/Textures.png", 4, 5, 2, 1);
-        Texture::RegisterTexture(VoxelType::POTION, "./Resources/Textures/Textures.png", 4, 5, 1, 2);
-        Texture::RegisterTexture(VoxelType::SWORD, "./Resources/Textures/Textures.png", 4, 5, 0, 2);
-        Texture::RegisterTexture(VoxelType::HEART, "./Resources/Textures/Textures.png", 4, 5, 1, 1);
-        Texture::RegisterTexture(VoxelType::JAR, "./Resources/Textures/Textures.png", 4, 5, 2, 0);
+        RegisterTexture(VoxelType::BRICK, "./Resources/Textures/Textures.png", 3, 0, 0, 0);
+        RegisterTexture(VoxelType::BRICK_RED, "./Resources/Textures/Textures.png", 3, 0, 0, 2);
+        RegisterTexture(VoxelType::EYE, "./Resources/Textures/Textures.png", 3, 0, 2, 0);
+        RegisterTexture(VoxelType::BLOCK, "./Resources/Textures/Textures.png", 3, 0, 1, 0);
+        RegisterTexture(VoxelType::WOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 1);
+        RegisterTexture(VoxelType::BLOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 2);
+        RegisterTexture(VoxelType::WATER, "./Resources/Textures/Textures.png", 3, 0, 1, 1);
+
+        RegisterTexture(VoxelType::TREE, "./Resources/Textures/Sprites.png", 4, 5, 2, 1);
+        RegisterTexture(VoxelType::POTION, "./Resources/Textures/Sprites.png", 4, 5, 1, 2);
+        RegisterTexture(VoxelType::SWORD, "./Resources/Textures/Sprites.png", 4, 5, 0, 2);
+        RegisterTexture(VoxelType::HEART, "./Resources/Textures/Sprites.png", 4, 5, 1, 1);
+        RegisterTexture(VoxelType::JAR, "./Resources/Textures/Sprites.png", 4, 5, 2, 0);
     }
 };
 
