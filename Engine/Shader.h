@@ -26,7 +26,7 @@ public:
 
     void UpdatePerspective(const int &width, const int &height)
     {
-        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.001f, 100.0f);
+        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.001f, 256.0f);
     }
     void Use()
     {
