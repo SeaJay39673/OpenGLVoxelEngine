@@ -12,7 +12,7 @@
 
 using std::string;
 
-class World : Game
+class World : public Game
 {
 private:
     mat4 *projection;
@@ -23,9 +23,9 @@ private:
 public:
     World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&shader)
     {
+        type = GameType::SEQUENTIAL;
         ChunkManager::InitChunkManager(camera.GetCameraPos(), 8);
     };
-
     void Update() override;
     void ProcessInput() override;
     void Render() override;

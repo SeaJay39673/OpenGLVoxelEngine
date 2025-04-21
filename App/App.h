@@ -47,7 +47,6 @@ public:
     {
         _game = game;
         _game->SetApp(this);
-        _game->Start();
     }
     void Run()
     {
@@ -56,6 +55,9 @@ public:
             cout << "No Game Loaded\n";
             return;
         }
+
+        _game->Start();
+
         const int targetTPS = 120; // ticks per second
         const milliseconds tickDuration(1000 / targetTPS);
 
@@ -70,8 +72,11 @@ public:
                 previousTime = currentTime;
                 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                _game->ProcessInput();
-                _game->Update();
+                if (_game->GameType() == GameType::SEQUENTIAL)
+                {
+                    _game->ProcessInput();
+                    _game->Update();
+                }
                 _game->Render();
                 NextFrame();
             }
