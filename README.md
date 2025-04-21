@@ -1,7 +1,7 @@
 # OpenGLVoxelEngine
 A voxel engine written in c++ and OpenGL with GLFW and GLAD. 
 
-[](./Images/Terrain.png)
+![Terrain Image](./Images/Terrain.png)
 
 
 # Build - VSCode (Windows)
