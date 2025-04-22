@@ -26,6 +26,7 @@ private:
     BO *vbo = nullptr, *ebo = nullptr;
     int position[3];
     vector<Vertex> vertices;
+    vector<unsigned int> indices;
 
 public:
     Mesh(VoxelType type, int pos[3]) : type(type)
@@ -54,11 +55,15 @@ public:
         }
         vao.Bind();
         vbo = new BO(vertices);
-        // ebo = new BO(indices);
+        if (indices.size())
+            ebo = new BO(indices);
         vao.LinkBO(*vbo);
         vbo->Unbind();
         vao.Unbind();
-        // ebo->Unbind();
+        if (ebo != nullptr)
+            ebo->Unbind();
+        vertices.clear();
+        indices.clear();
     }
 
     void Render(Shader &shader)
@@ -76,13 +81,17 @@ public:
         vao.Bind();
         Texture::GetTexture(type).Bind();
         shader.SetInt("texture1", 0); // Set the sampler to use texture unit 0
-        glDrawArrays(GL_TRIANGLES, 0, vbo->GetCount());
+        if (ebo != nullptr)
+            glDrawElements(GL_TRIANGLES, ebo->GetCount(), GL_UNSIGNED_INT, 0);
+        else
+            glDrawArrays(GL_TRIANGLES, 0, vbo->GetCount());
         Texture::GetTexture(type).Unbind();
         vao.Unbind();
     }
 
     void GenerateFace(int i, int j, int k, Face face)
     {
+        unsigned int offset = vertices.size();
         // Define the 8 corner positions of the cube relative to the voxel's position
         int positions[8][3] = {
             {i + position[0], j + position[1], k + position[2]},             // bottom left
@@ -117,56 +126,64 @@ public:
             vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
             vertices.push_back(Vertex(positions[1], normals[0], texCoords[1]));
             vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
-            vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
-            vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
+            // vertices.push_back(Vertex(positions[0], normals[0], texCoords[0]));
+            // vertices.push_back(Vertex(positions[2], normals[0], texCoords[2]));
             vertices.push_back(Vertex(positions[3], normals[0], texCoords[3]));
+
             break;
         case Face::FRONT:
             // Front face (CCW)
             vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
             vertices.push_back(Vertex(positions[6], normals[1], texCoords[1]));
             vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
-            vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
-            vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
+            // vertices.push_back(Vertex(positions[7], normals[1], texCoords[0]));
+            // vertices.push_back(Vertex(positions[5], normals[1], texCoords[2]));
             vertices.push_back(Vertex(positions[4], normals[1], texCoords[3]));
+
             break;
         case Face::LEFT:
             // Left face (CCW)
             vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
             vertices.push_back(Vertex(positions[5], normals[2], texCoords[1]));
             vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
-            vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
-            vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
+            // vertices.push_back(Vertex(positions[4], normals[2], texCoords[0]));
+            // vertices.push_back(Vertex(positions[1], normals[2], texCoords[2]));
             vertices.push_back(Vertex(positions[0], normals[2], texCoords[3]));
+
             break;
         case Face::RIGHT:
             // Right face (CCW)
             vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
             vertices.push_back(Vertex(positions[2], normals[3], texCoords[1]));
             vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
-            vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
-            vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
+            // vertices.push_back(Vertex(positions[3], normals[3], texCoords[0]));
+            // vertices.push_back(Vertex(positions[6], normals[3], texCoords[2]));
             vertices.push_back(Vertex(positions[7], normals[3], texCoords[3]));
+
             break;
         case Face::TOP:
             // Top face (CCW)
             vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
             vertices.push_back(Vertex(positions[5], normals[4], texCoords[1]));
             vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
-            vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
-            vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
+            // vertices.push_back(Vertex(positions[1], normals[4], texCoords[0]));
+            // vertices.push_back(Vertex(positions[6], normals[4], texCoords[2]));
             vertices.push_back(Vertex(positions[2], normals[4], texCoords[3]));
+
             break;
         case Face::BOTTOM:
             // Bottom face (CCW) - FIXED
             vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
             vertices.push_back(Vertex(positions[0], normals[5], texCoords[1]));
             vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
-            vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
-            vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
+            // vertices.push_back(Vertex(positions[4], normals[5], texCoords[0]));
+            // vertices.push_back(Vertex(positions[3], normals[5], texCoords[2]));
             vertices.push_back(Vertex(positions[7], normals[5], texCoords[3]));
+
             break;
         }
+
+        indices.insert(indices.begin(), {0 + offset, 1 + offset, 2 + offset, 0 + offset, 2 + offset, 3 + offset});
     }
 
     void GenerateVoxel(int i, int j, int k)

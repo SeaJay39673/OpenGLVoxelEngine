@@ -37,7 +37,7 @@ private:
     static void generateChunks(vec3 cameraPos);
 
 public:
-    static void InitChunkManager(vec3 cameraPos, int renderDistance = 8)
+    static void InitChunkManager(vec3 cameraPos, int renderDistance = 16)
     {
         Texture::InitializeTextures();
         ChunkManager::renderDistance = renderDistance;
@@ -126,18 +126,6 @@ void ChunkManager::UpdateChunks(const Frustum &frustum)
         }
     }
 
-    // while (!chunksToInitialize.empty() && count < 2)
-    // {
-    //     chunksToInitialize.front()->Initialize();
-
-    //     chunkSem.acquire();
-    //     chunks.push_back(chunksToInitialize.front());
-    //     chunkSem.release();
-
-    //     chunksToInitialize.pop();
-    //     count++;
-    //     cout << "Chunk initialized\n";
-    // }
     initSem.release();
 }
 
