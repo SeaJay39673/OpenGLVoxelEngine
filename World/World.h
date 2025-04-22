@@ -10,12 +10,18 @@
 #include "../IO/Mouse.h"
 #include "../IO/Keyboard.h"
 
-using std::string;
+#include <thread>
+#include <chrono>
+#include <atomic>
+
+using std::string, std::thread;
+
+using namespace std::chrono;
 
 class World : public Game
 {
 private:
-    mat4 *projection;
+    atomic<bool> threadShouldClose;
     Camera camera;
     Shader shader;
     Frustum frustum;
@@ -23,7 +29,8 @@ private:
 public:
     World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&shader)
     {
-        type = GameType::SEQUENTIAL;
+        threadShouldClose.store(false);
+        type = GameType::CONCURRENT;
         ChunkManager::InitChunkManager(camera.GetCameraPos(), 8);
     };
     void Update() override;
@@ -40,7 +47,10 @@ void World::ProcessInput()
     if (Keyboard::keys[GLFW_KEY_F])
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     if (Keyboard::keys[GLFW_KEY_ESCAPE])
+    {
+        threadShouldClose.store(true);
         _app->Shutdown();
+    }
     Mouse::delx = 0;
     Mouse::dely = 0;
 };
@@ -67,6 +77,17 @@ void World::Start()
                                     });
     shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight());
     _app->DisableCursor();
+
+    thread update(
+        [this]()
+        {
+            while (!threadShouldClose.load())
+            {
+                Update();
+                std::this_thread::sleep_for(std::chrono::milliseconds(60));
+            }
+        });
+    update.detach();
 };
 
 #endif

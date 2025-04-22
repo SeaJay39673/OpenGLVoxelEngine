@@ -6,14 +6,14 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Voxel.h"
+#include "Generator.h"
 
 #include <vector>
-
-#include "Generator.h"
+#include <atomic>
 
 #include <glm/glm.hpp>
 
-using std::vector, glm::vec3, glm::vec2, glm::mat4;
+using std::vector, glm::vec3, glm::vec2, glm::mat4, std::atomic;
 
 using namespace Voxel;
 using namespace Generator;
@@ -21,15 +21,18 @@ using namespace Generator;
 class Chunk
 {
 private:
+    atomic<bool> loaded, generated;
     const static int chunkSize = 16;
     int position[3];
     VoxelType voxels[chunkSize][chunkSize][chunkSize];
     unordered_map<VoxelType, Mesh *> meshMap;
     void loadChunk();
+    void generate();
 
 public:
     Chunk(int pos[3]);
     ~Chunk() {};
+    void Initialize();
     void Render(Shader &shader);
     static const int ChunkSize() { return chunkSize; };
     int *GetPosition() { return position; }
@@ -37,6 +40,8 @@ public:
 
 Chunk::Chunk(int pos[3])
 {
+    loaded.store(false);
+    generated.store(false);
     memcpy(position, pos, sizeof(position));
     for (int i = 0; i < chunkSize; i++)
         for (int j = 0; j < chunkSize; j++)
@@ -50,7 +55,7 @@ Chunk::Chunk(int pos[3])
             int height = (int)(noiseValue * MaxHeight * chunkSize);
             for (int k = 0; k < chunkSize; k++) // Y
             {
-                int y = (k + pos[1]);
+                int y = (k + position[1]);
                 if (y < height)
                 {
                     VoxelType type = VoxelType::AIR;
@@ -76,7 +81,7 @@ Chunk::Chunk(int pos[3])
         for (int j = 0; j < chunkSize; j++)
             for (int k = 0; k < chunkSize; k++)
             {
-                int y = (j + pos[1]);
+                int y = (j + position[1]);
                 if (y < 30 && voxels[i][j][k] == VoxelType::AIR)
                 {
                     voxels[i][j][k] = VoxelType::WATER;
@@ -84,7 +89,12 @@ Chunk::Chunk(int pos[3])
                         meshMap[VoxelType::WATER] = new Mesh(VoxelType::WATER, position);
                 }
             }
+}
+
+void Chunk::Initialize()
+{
     loadChunk();
+    loaded.store(true);
 }
 
 void Chunk::loadChunk()
@@ -126,25 +136,23 @@ void Chunk::loadChunk()
             }
         }
     }
+}
 
-    vector<VoxelType> keys;
-
-    for (auto &pair : meshMap)
+void Chunk::generate()
+{
+    for (auto pair : meshMap)
     {
-        if (pair.second->Vertices() > 0)
-            pair.second->CreateMesh();
-        else
-            keys.push_back(pair.first);
+        pair.second->CreateMesh();
     }
-    for (auto it = keys.begin(); it != keys.end();)
-    {
-        it = keys.erase(it);
-    }
+    generated.store(true);
 }
 
 void Chunk::Render(Shader &shader)
 {
-
+    if (!loaded.load())
+        return;
+    if (!generated.load())
+        generate();
     for (auto &pair : meshMap)
     {
         pair.second->Render(shader);

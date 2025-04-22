@@ -64,7 +64,10 @@ public:
     void Render(Shader &shader)
     {
         if (vbo == nullptr)
+        {
+            cout << "VBO IS NULLPTR\n";
             return;
+        }
         if (type == VoxelType::WATER)
             shader.SetFloat("TexOpacity", .5);
         else

@@ -51,39 +51,25 @@ public:
 
         auto previousTime = high_resolution_clock::now();
 
-        switch (_game->GameType())
+        while (!ShouldClose())
         {
-        case GameType::CONCURRENT:
-            while (!ShouldClose())
+            auto currentTime = high_resolution_clock::now();
+            auto elapsedTime = duration_cast<milliseconds>(currentTime - previousTime);
+            if (elapsedTime >= tickDuration)
             {
+                previousTime = currentTime;
                 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                _game->ProcessInput();
+                if (_game->GameType() == GameType::SEQUENTIAL)
+                    _game->Update();
                 _game->Render();
                 NextFrame();
             }
-            break;
-
-        case GameType::SEQUENTIAL:
-            while (!ShouldClose())
+            else
             {
-                auto currentTime = high_resolution_clock::now();
-                auto elapsedTime = duration_cast<milliseconds>(currentTime - previousTime);
-                if (elapsedTime >= tickDuration)
-                {
-                    previousTime = currentTime;
-                    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                    _game->ProcessInput();
-                    _game->Update();
-                    _game->Render();
-                    NextFrame();
-                }
-                else
-                {
-                    std::this_thread::sleep_for(tickDuration - elapsedTime);
-                }
+                std::this_thread::sleep_for(tickDuration - elapsedTime);
             }
-            break;
         }
 
         glfwTerminate();

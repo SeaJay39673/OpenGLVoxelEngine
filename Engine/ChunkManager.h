@@ -6,21 +6,30 @@
 #include "Frustum.h"
 #include "Generator.h"
 
-using glm::vec4;
+#include <mutex>
+#include <semaphore>
+#include <queue>
+
+using glm::vec4, std::mutex, std::lock_guard, std::counting_semaphore, std::queue;
 using namespace Generator;
 
 class ChunkManager
 {
 private:
     static int renderDistance;
+    static mutex chunkMutex;
+    static counting_semaphore<1> chunkSem;
     static vector<Chunk *> chunks;
-    static vector<vec3> chunksToLoad;
+    static counting_semaphore<1> createSem;
+    static queue<vec3> chunksToCreate;
+    static counting_semaphore<1> initSem;
+    static vector<Chunk *> chunksToInitialize;
+
     static void generateChunks(vec3 cameraPos);
 
 public:
     static void InitChunkManager(vec3 cameraPos, int renderDistance = 8)
     {
-
         Texture::InitializeTextures();
         ChunkManager::renderDistance = renderDistance;
         chunks.reserve(renderDistance * renderDistance * MaxHeight);
@@ -33,12 +42,35 @@ public:
     static void RenderChunks(Shader &shader, const Frustum &frustum);
 };
 
+counting_semaphore<1> ChunkManager::chunkSem(1);
+counting_semaphore<1> ChunkManager::createSem(1);
+counting_semaphore<1> ChunkManager::initSem(1);
+mutex ChunkManager::chunkMutex;
 int ChunkManager::renderDistance = 0;
 vector<Chunk *> ChunkManager::chunks;
-vector<vec3> ChunkManager::chunksToLoad;
+queue<vec3> ChunkManager::chunksToCreate;
+vector<Chunk *> ChunkManager::chunksToInitialize;
 
 void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
 {
+
+    int count = 0;
+    createSem.acquire();
+    while (!chunksToCreate.empty() && count < 2)
+    {
+        vec3 front = chunksToCreate.front();
+        int pos[3] = {(int)front.x, (int)front.y, (int)front.z};
+
+        initSem.acquire();
+        chunksToInitialize.push_back(new Chunk(pos));
+        initSem.release();
+
+        chunksToCreate.pop();
+        count++;
+    }
+    createSem.release();
+
+    chunkSem.acquire();
     for (Chunk *chunk : chunks)
     {
         // Calculate the bounding box of the chunk
@@ -51,19 +83,28 @@ void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
             chunk->Render(shader);
         }
     }
+    chunkSem.release();
 }
 
 void ChunkManager::UpdateChunks(const Frustum &frustum)
 {
     int count = 0;
-    for (auto it = chunksToLoad.begin(); it != chunksToLoad.end() && count < 2;)
+
+    initSem.acquire();
+
+    for (auto it = chunksToInitialize.begin(); it != chunksToInitialize.end() && count < 2;)
     {
-        vec3 max = *it + vec3((float)(Chunk::ChunkSize()));
-        if (frustum.IsBoxInFrustum(*it, max))
+        vec3 min((*it)->GetPosition()[0], (*it)->GetPosition()[1], (*it)->GetPosition()[2]);
+        vec3 max = vec3(min[0], min[1], min[2]) + vec3((float)(Chunk::ChunkSize()));
+        if (frustum.IsBoxInFrustum(min, max))
         {
-            int pos[3] = {(int)(*it).x, (int)(*it).y, (int)(*it).z};
-            chunks.push_back(new Chunk(pos));
-            it = chunksToLoad.erase(it);
+            (*it)->Initialize();
+
+            chunkSem.acquire();
+            chunks.push_back(*it);
+            chunkSem.release();
+
+            it = chunksToInitialize.erase(it);
             count++;
         }
         else
@@ -71,6 +112,20 @@ void ChunkManager::UpdateChunks(const Frustum &frustum)
             ++it;
         }
     }
+
+    // while (!chunksToInitialize.empty() && count < 2)
+    // {
+    //     chunksToInitialize.front()->Initialize();
+
+    //     chunkSem.acquire();
+    //     chunks.push_back(chunksToInitialize.front());
+    //     chunkSem.release();
+
+    //     chunksToInitialize.pop();
+    //     count++;
+    //     cout << "Chunk initialized\n";
+    // }
+    initSem.release();
 }
 
 void ChunkManager::generateChunks(vec3 cameraPos)
@@ -88,7 +143,9 @@ void ChunkManager::generateChunks(vec3 cameraPos)
                 int xPos = (x + i) * Chunk::ChunkSize();
                 int yPos = (y + k) * Chunk::ChunkSize();
                 int zPos = (z + j) * Chunk::ChunkSize();
-                chunksToLoad.push_back(vec3(xPos, yPos, zPos));
+                createSem.acquire();
+                chunksToCreate.emplace(xPos, yPos, zPos);
+                createSem.release();
             }
         }
     }
