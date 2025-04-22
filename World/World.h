@@ -73,9 +73,9 @@ void World::Start()
                                     [this](int width, int height)
                                     {
                                         glViewport(0, 0, width, height);
-                                        shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight());
+                                        shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight(), ChunkManager::GetRenderDistance() * Chunk::ChunkSize() - Chunk::ChunkSize());
                                     });
-    shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight());
+    shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight(), ChunkManager::GetRenderDistance() * Chunk::ChunkSize() - Chunk::ChunkSize());
     _app->DisableCursor();
 
     thread update(

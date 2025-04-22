@@ -70,7 +70,7 @@ Chunk::Chunk(int pos[3])
                         type = VoxelType::WOOD;
 
                     voxels[i][k][j] = type;
-                    if (meshMap.find(type) == meshMap.end())
+                    if (type != VoxelType::AIR && meshMap.find(type) == meshMap.end())
                     {
                         meshMap[type] = new Mesh(type, position);
                     }
@@ -85,10 +85,10 @@ Chunk::Chunk(int pos[3])
                 if (y < 30 && voxels[i][j][k] == VoxelType::AIR)
                 {
                     voxels[i][j][k] = VoxelType::WATER;
-                    if (meshMap.find(VoxelType::WATER) == meshMap.end())
-                        meshMap[VoxelType::WATER] = new Mesh(VoxelType::WATER, position);
                 }
             }
+    if (meshMap.find(VoxelType::WATER) == meshMap.end())
+        meshMap[VoxelType::WATER] = new Mesh(VoxelType::WATER, position);
 }
 
 void Chunk::Initialize()

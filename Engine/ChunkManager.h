@@ -5,6 +5,7 @@
 #include "Texture.h"
 #include "Frustum.h"
 #include "Generator.h"
+#include "./Concurrent/VectorThreadExecutor.h"
 
 #include <mutex>
 #include <semaphore>
@@ -30,14 +31,14 @@ private:
     static vector<Chunk *> chunks;
     static counting_semaphore<1> createSem;
     static priority_queue<pair<float, vec3>, vector<pair<float, vec3>>, CompareChunks> chunksToCreate;
-    // static queue<vec3> chunksToCreate;
     static counting_semaphore<1> initSem;
     static vector<Chunk *> chunksToInitialize;
+    static VectorThreadExecutor<Chunk *> Initializer;
 
     static void generateChunks(vec3 cameraPos);
 
 public:
-    static void InitChunkManager(vec3 cameraPos, int renderDistance = 16)
+    static void InitChunkManager(vec3 cameraPos, int renderDistance = 8)
     {
         Texture::InitializeTextures();
         ChunkManager::renderDistance = renderDistance;
@@ -58,74 +59,69 @@ mutex ChunkManager::chunkMutex;
 int ChunkManager::renderDistance = 0;
 vector<Chunk *> ChunkManager::chunks;
 priority_queue<pair<float, vec3>, vector<pair<float, vec3>>, CompareChunks> ChunkManager::chunksToCreate;
-
-// queue<vec3> ChunkManager::chunksToCreate;
 vector<Chunk *> ChunkManager::chunksToInitialize;
+VectorThreadExecutor<Chunk *> ChunkManager::Initializer;
 
 void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
 {
     int count = 0;
     createSem.acquire();
-    while (!chunksToCreate.empty() && count < 2)
+    priority_queue<pair<float, vec3>, vector<pair<float, vec3>>, CompareChunks> copy = chunksToCreate;
+    createSem.release();
+    while (!copy.empty())
     {
-        pair<float, vec3> top = chunksToCreate.top();
+        pair<float, vec3> top = copy.top();
         vec3 chunkPos = top.second;
-        // vec3 front = chunksToCreate.front();
         int pos[3] = {(int)chunkPos.x, (int)chunkPos.y, (int)chunkPos.z};
 
+        Chunk *created = new Chunk(pos);
         initSem.acquire();
-        chunksToInitialize.push_back(new Chunk(pos));
+        chunksToInitialize.push_back(created);
         initSem.release();
 
-        chunksToCreate.pop();
+        copy.pop();
 
         count++;
+    }
+
+    createSem.acquire();
+    for (int i = 0; i < count; i++)
+    {
+        chunksToCreate.pop();
     }
     createSem.release();
 
     chunkSem.acquire();
-    for (Chunk *chunk : chunks)
+    vector<Chunk *> chunksCopy = chunks;
+    chunkSem.release();
+    for (Chunk *chunk : chunksCopy)
     {
-        // Calculate the bounding box of the chunk
         vec3 min(chunk->GetPosition()[0], chunk->GetPosition()[1], chunk->GetPosition()[2]);
         vec3 max = min + vec3((float)(Chunk::ChunkSize()));
 
-        // Check if the chunk is in the frustum
         if (frustum.IsBoxInFrustum(min, max))
         {
             chunk->Render(shader);
         }
     }
-    chunkSem.release();
 }
 
 void ChunkManager::UpdateChunks(const Frustum &frustum)
 {
     int count = 0;
 
-    initSem.acquire();
-
-    for (auto it = chunksToInitialize.begin(); it != chunksToInitialize.end() && count < 2;)
-    {
-        vec3 min((*it)->GetPosition()[0], (*it)->GetPosition()[1], (*it)->GetPosition()[2]);
-        vec3 max = vec3(min[0], min[1], min[2]) + vec3((float)(Chunk::ChunkSize()));
-        if (frustum.IsBoxInFrustum(min, max))
+    Initializer.AssignTask(
+        [](Chunk *chunk)
         {
-            (*it)->Initialize();
-
+            chunk->Initialize();
             chunkSem.acquire();
-            chunks.push_back(*it);
+            chunks.push_back(chunk);
             chunkSem.release();
+        });
 
-            it = chunksToInitialize.erase(it);
-            count++;
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
+    int initializedCount = Initializer.Execute(chunksToInitialize);
+    initSem.acquire();
+    chunksToInitialize.erase(chunksToInitialize.begin(), chunksToInitialize.begin() + initializedCount);
     initSem.release();
 }
 

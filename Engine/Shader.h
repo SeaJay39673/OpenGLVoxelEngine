@@ -24,9 +24,9 @@ public:
     Shader(const string &vertexPath, const string &fragmentPath);
     ~Shader();
 
-    void UpdatePerspective(const int &width, const int &height)
+    void UpdatePerspective(const int &width, const int &height, float depth = 256)
     {
-        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.001f, 256.0f);
+        projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.001f, depth);
     }
     void Use()
     {
