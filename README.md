@@ -27,10 +27,6 @@ Then run "CMake: Build" and finally "CMake: Debug";
     - Only render the top faces exposed to air
     - Have chunks talk to neighbors so touching voxels dont render inside faces
 
-* ### Optimize loading chunks 
-    - chunks are already loaded in separate thread
-    - Need to use a thread pool on separate thread to load multiple chunks at once. Currently running on separate thread but in sequence. 
-
 * ### Dynamically load and unload chunks
     - Currently not rendering chunks in view frustum
     - Can take this further by unloading chunks outside of render distance, deleting the buffer objects to save memory on the GPU
