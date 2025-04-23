@@ -101,39 +101,38 @@ namespace Engine::ChunkSpace
 
     void Chunk::loadChunk()
     {
-        for (int i = 0; i < chunkSize; i++) // x
+        for (int x = 0; x < chunkSize; x++)
         {
-            for (int j = 0; j < chunkSize; j++) // z
+            for (int z = 0; z < chunkSize; z++)
             {
-                for (int k = 0; k < chunkSize; k++)
+                // Find the highest solid voxel in this (x, z) column
+                for (int y = chunkSize - 1; y >= 0; y--)
                 {
-                    if (GetVoxel(i, j, k) != VoxelType::AIR)
+                    if (GetVoxel(x, y, z) != VoxelType::AIR)
                     {
-                        // Check each face of the voxel and only generate it if it's visible
-                        if (i == 0 || GetVoxel(i - 1, j, k) == VoxelType::AIR || GetVoxel(i - 1, j, k) == VoxelType::WATER) // Left face
-                        {
-                            meshMap[GetVoxel(i, j, k)]->GenerateFace(i, j, k, Face::LEFT);
-                        }
-                        if (i == chunkSize - 1 || GetVoxel(i + 1, j, k) == VoxelType::AIR || GetVoxel(i + 1, j, k) == VoxelType::WATER) // Right face
-                        {
-                            meshMap[GetVoxel(i, j, k)]->GenerateFace(i, j, k, Face::RIGHT);
-                        }
-                        if (j == 0 || GetVoxel(i, j - 1, k) == VoxelType::AIR || GetVoxel(i, j - 1, k) == VoxelType::WATER) // Bottom face
-                        {
-                            meshMap[GetVoxel(i, j, k)]->GenerateFace(i, j, k, Face::BOTTOM);
-                        }
-                        if (j == chunkSize - 1 || GetVoxel(i, j + 1, k) == VoxelType::AIR || GetVoxel(i, j + 1, k) == VoxelType::WATER) // Top face
-                        {
-                            meshMap[GetVoxel(i, j, k)]->GenerateFace(i, j, k, Face::TOP);
-                        }
-                        if (k == 0 || GetVoxel(i, j, k - 1) == VoxelType::AIR || GetVoxel(i, j, k - 1) == VoxelType::WATER) // Back face
-                        {
-                            meshMap[GetVoxel(i, j, k)]->GenerateFace(i, j, k, Face::BACK);
-                        }
-                        if (k == chunkSize - 1 || GetVoxel(i, j, k + 1) == VoxelType::AIR || GetVoxel(i, j, k + 1) == VoxelType::WATER) // Front face
-                        {
-                            meshMap[GetVoxel(i, j, k)]->GenerateFace(i, j, k, Face::FRONT);
-                        }
+                        VoxelType voxelType = GetVoxel(x, y, z);
+
+                        // Generate faces exposed to AIR or WATER
+                        if (x == 0 || GetVoxel(x - 1, y, z) == VoxelType::AIR || GetVoxel(x - 1, y, z) == VoxelType::WATER)
+                            meshMap[voxelType]->GenerateFace(x, y, z, Face::LEFT);
+
+                        if (x == chunkSize - 1 || GetVoxel(x + 1, y, z) == VoxelType::AIR || GetVoxel(x + 1, y, z) == VoxelType::WATER)
+                            meshMap[voxelType]->GenerateFace(x, y, z, Face::RIGHT);
+
+                        if (y == 0 || GetVoxel(x, y - 1, z) == VoxelType::AIR || GetVoxel(x, y - 1, z) == VoxelType::WATER)
+                            meshMap[voxelType]->GenerateFace(x, y, z, Face::BOTTOM);
+
+                        if (y == chunkSize - 1 || GetVoxel(x, y + 1, z) == VoxelType::AIR || GetVoxel(x, y + 1, z) == VoxelType::WATER)
+                            meshMap[voxelType]->GenerateFace(x, y, z, Face::TOP);
+
+                        if (z == 0 || GetVoxel(x, y, z - 1) == VoxelType::AIR || GetVoxel(x, y, z - 1) == VoxelType::WATER)
+                            meshMap[voxelType]->GenerateFace(x, y, z, Face::BACK);
+
+                        if (z == chunkSize - 1 || GetVoxel(x, y, z + 1) == VoxelType::AIR || GetVoxel(x, y, z + 1) == VoxelType::WATER)
+                            meshMap[voxelType]->GenerateFace(x, y, z, Face::FRONT);
+
+                        if (voxelType != VoxelType::WATER)
+                            break; // Stop after finding the top voxel in this column
                     }
                 }
             }
