@@ -3,18 +3,14 @@
 #define WORLD_H
 
 #include "../Game/Game.h"
-#include "../Engine/ChunkManager.h"
-#include "../Engine/Shader.h"
-#include "../Engine/Camera.h"
-#include "../Engine/Frustum.h"
-#include "../IO/Mouse.h"
-#include "../IO/Keyboard.h"
+#include "IO/IO.h"
+#include "../Engine/Engine.h"
 
 #include <thread>
 #include <chrono>
 #include <atomic>
 
-using std::string, std::thread;
+using std::string, std::thread, Engine::Camera, Engine::Shader, Engine::ChunkSpace::ChunkManager, Engine::ChunkSpace::Chunk, Engine::ChunkSpace::Config;
 
 using namespace std::chrono;
 
@@ -73,9 +69,9 @@ void World::Start()
                                     [this](int width, int height)
                                     {
                                         glViewport(0, 0, width, height);
-                                        shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight(), ChunkManager::GetRenderDistance() * Chunk::ChunkSize() - Chunk::ChunkSize());
+                                        shader.UpdatePerspective(width, height, (float)Config::GetRenderDistance() * Config::GetChunkSize() - Config::GetChunkSize());
                                     });
-    shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight(), ChunkManager::GetRenderDistance() * Chunk::ChunkSize() - Chunk::ChunkSize());
+    shader.UpdatePerspective(_app->GetWidth(), _app->GetHeight(), (float)Config::GetRenderDistance() * Config::GetChunkSize() - Config::GetChunkSize());
     _app->DisableCursor();
 
     thread update(

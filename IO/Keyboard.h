@@ -4,7 +4,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-namespace Keyboard
+namespace IO::Keyboard
 {
     static bool keys[1024];
     void KeyboardCallback(int key, int scancode, int action, int mods)

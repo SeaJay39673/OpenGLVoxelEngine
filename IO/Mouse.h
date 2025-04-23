@@ -1,7 +1,7 @@
 #ifndef MOUSE_H
 #define MOUSE_H
 
-namespace Mouse
+namespace IO::Mouse
 {
     static double x = 0, y = 0;
     static double delx = 0, dely = 0;

@@ -6,7 +6,7 @@
 #include <iostream>
 using namespace std;
 
-namespace Voxel
+namespace Engine::ChunkSpace::Voxel
 {
     enum class VoxelType
     {
@@ -22,15 +22,8 @@ namespace Voxel
         POTION,
         SWORD,
         HEART,
-        JAR,
-
-        COUNT // Add COUNT as the last element
+        JAR
     };
-    constexpr int VoxelTypeCount = static_cast<int>(VoxelType::COUNT);
-    VoxelType GetRandomVoxel()
-    {
-        return (VoxelType)(rand() % VoxelTypeCount);
-    }
 }
 
 #endif

@@ -10,211 +10,211 @@
 #include <map>
 
 using std::cout, std::endl, std::unordered_map, std::function, std::string;
-/**
- * @brief Class for abstracting an OpenGL window using GLFW3
- *
- */
-class Window
+
+namespace Application
 {
-private:
-    static GLFWwindow *window;
-    int _width;
-    int _height;
-    unordered_map<string, function<void(int, int)>> frameSizeCallbacks;
-    unordered_map<string, function<void(double, double)>> mouseCallbacks;
-    unordered_map<string, function<void(int, int, int, int)>> keyCallbacks;
-    void initializeGLFW();
-    bool initializeWindow();
-    bool initializeGlad();
-
-public:
-    Window();
-    void Shutdown();
-    bool ShouldClose() { return glfwWindowShouldClose(window); }
-    void NextFrame();
-    int GetWidth() { return _width; }
-    int GetHeight() { return _height; }
-    void RegisterFrameSizeCallback(string name, function<void(int, int)> callback);
-    void DeregisterFrameSizeCallback(string name);
-    void RegisterMouseCallback(string name, function<void(double, double)> callback);
-    void DeregisterMouseCallback(string name);
-    void RegisterKeyCallback(string name, function<void(int, int, int, int)> callback);
-    void DeregisterKeyCallback(string name);
-    void DisableCursor()
+    class Window
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
-    void EnableCursor()
+    private:
+        static GLFWwindow *window;
+        int _width;
+        int _height;
+        unordered_map<string, function<void(int, int)>> frameSizeCallbacks;
+        unordered_map<string, function<void(double, double)>> mouseCallbacks;
+        unordered_map<string, function<void(int, int, int, int)>> keyCallbacks;
+        void initializeGLFW();
+        bool initializeWindow();
+        bool initializeGlad();
+
+    public:
+        Window();
+        void Shutdown();
+        bool ShouldClose() { return glfwWindowShouldClose(window); }
+        void NextFrame();
+        int GetWidth() { return _width; }
+        int GetHeight() { return _height; }
+        void RegisterFrameSizeCallback(string name, function<void(int, int)> callback);
+        void DeregisterFrameSizeCallback(string name);
+        void RegisterMouseCallback(string name, function<void(double, double)> callback);
+        void DeregisterMouseCallback(string name);
+        void RegisterKeyCallback(string name, function<void(int, int, int, int)> callback);
+        void DeregisterKeyCallback(string name);
+        void DisableCursor()
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+        void EnableCursor()
+        {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    };
+
+    GLFWwindow *Window::window = nullptr;
+
+    //====| Private Methods |====//
+
+    void Window::initializeGLFW()
     {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwInit();
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_FALSE);
     }
-};
 
-GLFWwindow *Window::window = nullptr;
-
-//====| Private Methods |====//
-
-void Window::initializeGLFW()
-{
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GL_FALSE);
-}
-
-bool Window::initializeWindow()
-{
-    window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
+    bool Window::initializeWindow()
     {
-        cout << "Failed to create GLFW window" << endl;
-        glfwTerminate();
-        return false;
-    }
-    glfwMakeContextCurrent(window);
-    glfwGetWindowSize(window, &_width, &_height);
-    glfwSetWindowUserPointer(window, this);
-    glfwSetFramebufferSizeCallback(window,
-                                   [](GLFWwindow *window, int width, int height)
-                                   {
-                                       Window *instance = (Window *)glfwGetWindowUserPointer(window);
-                                       if (instance)
+        window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+        if (window == NULL)
+        {
+            cout << "Failed to create GLFW window" << endl;
+            glfwTerminate();
+            return false;
+        }
+        glfwMakeContextCurrent(window);
+        glfwGetWindowSize(window, &_width, &_height);
+        glfwSetWindowUserPointer(window, this);
+        glfwSetFramebufferSizeCallback(window,
+                                       [](GLFWwindow *window, int width, int height)
                                        {
-                                           instance->_width = width;
-                                           instance->_height = height;
-                                           for (const auto &pair : instance->frameSizeCallbacks)
+                                           Window *instance = (Window *)glfwGetWindowUserPointer(window);
+                                           if (instance)
                                            {
-                                               pair.second(width, height);
+                                               instance->_width = width;
+                                               instance->_height = height;
+                                               for (const auto &pair : instance->frameSizeCallbacks)
+                                               {
+                                                   pair.second(width, height);
+                                               }
                                            }
-                                       }
-                                       else
-                                       {
-                                           cout << "No Window Instance\n";
-                                       }
-                                   });
-    glfwSetCursorPosCallback(window,
-                             [](GLFWwindow *window, double xpos, double ypos)
-                             {
-                                 Window *instance = (Window *)glfwGetWindowUserPointer(window);
-                                 if (instance)
+                                           else
+                                           {
+                                               cout << "No Window Instance\n";
+                                           }
+                                       });
+        glfwSetCursorPosCallback(window,
+                                 [](GLFWwindow *window, double xpos, double ypos)
                                  {
-                                     for (const auto &pair : instance->mouseCallbacks)
+                                     Window *instance = (Window *)glfwGetWindowUserPointer(window);
+                                     if (instance)
                                      {
-                                         pair.second(xpos, ypos);
+                                         for (const auto &pair : instance->mouseCallbacks)
+                                         {
+                                             pair.second(xpos, ypos);
+                                         }
                                      }
-                                 }
-                                 else
-                                 {
-                                     cout << "No Window Instance\n";
-                                 }
-                             });
-    glfwSetKeyCallback(window,
-                       [](GLFWwindow *window, int key, int scancode, int action, int mods)
-                       {
-                           Window *instance = (Window *)glfwGetWindowUserPointer(window);
-                           if (instance)
+                                     else
+                                     {
+                                         cout << "No Window Instance\n";
+                                     }
+                                 });
+        glfwSetKeyCallback(window,
+                           [](GLFWwindow *window, int key, int scancode, int action, int mods)
                            {
-                               for (const auto &pair : instance->keyCallbacks)
+                               Window *instance = (Window *)glfwGetWindowUserPointer(window);
+                               if (instance)
                                {
-                                   pair.second(key, scancode, action, mods);
+                                   for (const auto &pair : instance->keyCallbacks)
+                                   {
+                                       pair.second(key, scancode, action, mods);
+                                   }
                                }
-                           }
-                           else
-                           {
-                               cout << "No Window Instance\n";
-                           }
-                       });
-    return true;
-}
-
-bool Window::initializeGlad()
-{
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return false;
+                               else
+                               {
+                                   cout << "No Window Instance\n";
+                               }
+                           });
+        return true;
     }
-    return true;
-}
 
-//====| Constructors/Desctructors |====//
-
-/**
- * @brief Construct a new window object, initialize new GLFWWindow if it doesn't exist already
- *
- */
-Window::Window()
-{
-    if (window)
-        return;
-    initializeGLFW();
-    if (!initializeWindow())
+    bool Window::initializeGlad()
     {
-        Shutdown();
-        exit(1);
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+        {
+            std::cout << "Failed to initialize GLAD" << std::endl;
+            return false;
+        }
+        return true;
     }
-    if (!initializeGlad())
+
+    //====| Constructors/Desctructors |====//
+
+    /**
+     * @brief Construct a new window object, initialize new GLFWWindow if it doesn't exist already
+     *
+     */
+    Window::Window()
     {
-        exit(1);
+        if (window)
+            return;
+        initializeGLFW();
+        if (!initializeWindow())
+        {
+            Shutdown();
+            exit(1);
+        }
+        if (!initializeGlad())
+        {
+            exit(1);
+        }
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK); // Cull back faces (default)
+        glFrontFace(GL_CCW); // Counter-clockwise vertices define the front face
     }
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK); // Cull back faces (default)
-    glFrontFace(GL_CCW); // Counter-clockwise vertices define the front face
-}
 
-//====| Public Methods |====//
+    //====| Public Methods |====//
 
-/**
- * @brief Close window and terminate GLFW program
- *
- */
-void Window::Shutdown()
-{
-    glfwSetWindowShouldClose(window, true);
-}
+    /**
+     * @brief Close window and terminate GLFW program
+     *
+     */
+    void Window::Shutdown()
+    {
+        glfwSetWindowShouldClose(window, true);
+    }
 
-/**
- * @brief Advance to the next frame
- *
- */
-void Window::NextFrame()
-{
-    glfwSwapBuffers(window);
-    glfwPollEvents();
-}
+    /**
+     * @brief Advance to the next frame
+     *
+     */
+    void Window::NextFrame()
+    {
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 
-void Window::RegisterFrameSizeCallback(string name, function<void(int, int)> callback)
-{
-    frameSizeCallbacks.insert({name, callback});
-}
+    void Window::RegisterFrameSizeCallback(string name, function<void(int, int)> callback)
+    {
+        frameSizeCallbacks.insert({name, callback});
+    }
 
-void Window::DeregisterFrameSizeCallback(string name)
-{
-    frameSizeCallbacks.erase(name);
-}
-void Window::RegisterMouseCallback(string name, function<void(double, double)> callback)
-{
-    mouseCallbacks.insert({name, callback});
-}
-void Window::DeregisterMouseCallback(string name)
-{
-    mouseCallbacks.erase(name);
-}
+    void Window::DeregisterFrameSizeCallback(string name)
+    {
+        frameSizeCallbacks.erase(name);
+    }
+    void Window::RegisterMouseCallback(string name, function<void(double, double)> callback)
+    {
+        mouseCallbacks.insert({name, callback});
+    }
+    void Window::DeregisterMouseCallback(string name)
+    {
+        mouseCallbacks.erase(name);
+    }
 
-void Window::RegisterKeyCallback(string name, function<void(int, int, int, int)> callback)
-{
-    keyCallbacks.insert({name, callback});
-}
+    void Window::RegisterKeyCallback(string name, function<void(int, int, int, int)> callback)
+    {
+        keyCallbacks.insert({name, callback});
+    }
 
-void Window::DeregisterKeyCallback(string name)
-{
-    keyCallbacks.erase(name);
+    void Window::DeregisterKeyCallback(string name)
+    {
+        keyCallbacks.erase(name);
+    }
 }
 
 #endif
