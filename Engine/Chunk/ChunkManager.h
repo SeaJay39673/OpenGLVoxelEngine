@@ -120,6 +120,7 @@ namespace Engine::ChunkSpace
 
         vector<vec3> chunksToUnload;
 
+        loadSem.acquire();
         for (const auto &pair : chunksLoaded)
         {
             vec3 pos = pair.first;
@@ -130,6 +131,7 @@ namespace Engine::ChunkSpace
                 chunksToUnload.push_back(pos);
             }
         }
+        loadSem.release();
 
         ThreadExecutor.Execute<vec3>(
             chunksToUnload,
@@ -173,6 +175,7 @@ namespace Engine::ChunkSpace
                     {
                         vec3 chunkPos = (cameraChunkPos + vec3(x, y, z)) * (float)chunkSize;
 
+                        loadSem.acquire();
                         if (chunksLoaded.find(chunkPos) == chunksLoaded.end())
                         {
                             if (x * x + z * z + y * y <= radiusSquared)
@@ -181,6 +184,7 @@ namespace Engine::ChunkSpace
                                 chunksToCreate.emplace(dist, chunkPos);
                             }
                         }
+                        loadSem.release();
                     }
 
             currentPos = cameraChunkPos;
