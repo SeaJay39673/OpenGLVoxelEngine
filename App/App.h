@@ -49,30 +49,50 @@ namespace Application
 
             _game->Start();
 
-            const int targetTPS = 120; // ticks per second
-            const milliseconds tickDuration(1000 / targetTPS);
+            const int targetFPS = 120;
+            const auto frameDuration = duration<double, std::milli>(1000.0 / targetFPS);
 
             auto previousTime = high_resolution_clock::now();
+            auto secondTime = high_resolution_clock::now();
+
+            int fps = 0;
 
             while (!ShouldClose())
             {
-                auto currentTime = high_resolution_clock::now();
-                auto elapsedTime = duration_cast<milliseconds>(currentTime - previousTime);
-                if (elapsedTime >= tickDuration)
+                auto frameStart = high_resolution_clock::now();
+
+                // --- Game Logic & Rendering ---
+                glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                _game->ProcessInput();
+                if (_game->GameType() == GameType::SEQUENTIAL)
+                    _game->Update();
+                _game->Render();
+
+                NextFrame();
+
+                // --- Frame Timing Control ---
+                auto frameEnd = high_resolution_clock::now();
+                auto elapsed = frameEnd - frameStart;
+
+                if (elapsed < frameDuration)
                 {
-                    previousTime = currentTime;
-                    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                    _game->ProcessInput();
-                    if (_game->GameType() == GameType::SEQUENTIAL)
-                        _game->Update();
-                    _game->Render();
-                    NextFrame();
+                    // Busy-wait for the final precision
+                    while (high_resolution_clock::now() - frameStart < frameDuration)
+                    {
+                        // Spinlock - do nothing
+                    }
                 }
-                else
-                {
-                    std::this_thread::sleep_for(tickDuration - elapsedTime);
-                }
+
+                // fps++;
+                // --- FPS Counter ---
+                // if (high_resolution_clock::now() - secondTime >= seconds(1))
+                // {
+                //     cout << "FPS: " << fps << endl;
+                //     secondTime = high_resolution_clock::now();
+                //     fps = 0;
+                // }
             }
 
             glfwTerminate();

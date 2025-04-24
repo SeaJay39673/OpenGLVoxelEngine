@@ -72,7 +72,6 @@ namespace Engine::MeshSpace
         {
             if (vbo == nullptr)
             {
-                cout << "VBO IS NULLPTR\n";
                 return;
             }
             if (type == VoxelType::WATER)

@@ -32,6 +32,8 @@ namespace Engine::ChunkSpace
     class ChunkManager
     {
     private:
+        static vec3 currentPos;
+
         static counting_semaphore<1> meshSem;
         static unordered_map<vec3, Chunk *> chunksToMesh;
 
@@ -43,6 +45,8 @@ namespace Engine::ChunkSpace
 
         static counting_semaphore<1> renderSem;
         static unordered_map<vec3, Chunk *> chunksToRender;
+
+        static unordered_map<vec3, Chunk *> chunksLoaded;
 
         static ContainerThreadExecutor ThreadExecutor;
 
@@ -59,9 +63,11 @@ namespace Engine::ChunkSpace
             generateChunks(camera);
         }
 
-        static void UpdateChunks(const Frustum &frustum);
+        static void UpdateChunks(const Frustum &frustum, const vec3 &cameraPos);
         static void RenderChunks(Shader &shader, const Frustum &frustum);
     };
+
+    vec3 ChunkManager::currentPos;
 
     counting_semaphore<1> ChunkManager::meshSem(1);
     unordered_map<vec3, Chunk *> ChunkManager::chunksToMesh;
@@ -75,10 +81,48 @@ namespace Engine::ChunkSpace
     counting_semaphore<1> ChunkManager::renderSem(1);
     unordered_map<vec3, Chunk *> ChunkManager::chunksToRender;
 
+    unordered_map<vec3, Chunk *> ChunkManager::chunksLoaded;
+
     ContainerThreadExecutor ChunkManager::ThreadExecutor;
 
-    void ChunkManager::UpdateChunks(const Frustum &frustum)
+    void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 &cameraPos)
     {
+        int chunkSize = Config::GetChunkSize();
+        vec3 cameraChunkPos = floor(cameraPos / (float)chunkSize);
+
+        if (cameraChunkPos != currentPos)
+        {
+            int radius = Config::GetRenderDistance();
+            int radiusSquared = radius * radius;
+
+            for (int x = -radius; x <= radius; x++)
+                for (int z = -radius; z <= radius; z++)
+                    for (int y = Config::GetMaxHeight(); y >= 0; y--)
+                    {
+                        vec3 chunkPos = (cameraChunkPos + vec3(x, y, z)) * (float)chunkSize;
+
+                        if (chunksLoaded.find(chunkPos) == chunksLoaded.end())
+                        {
+                            if (x * x + z * z <= radiusSquared)
+                            {
+                                int pos[3] = {(int)chunkPos.x, (int)chunkPos.y, (int)chunkPos.z};
+                                Chunk *chunk = new Chunk(pos);
+
+                                meshSem.acquire();
+                                chunksToMesh[chunkPos] = chunk;
+                                meshSem.release();
+
+                                chunksLoaded[chunkPos] = chunk;
+
+                                if (chunk->HasVoxels())
+                                    break;
+                            }
+                        }
+                    }
+
+            currentPos = cameraChunkPos;
+        }
+
         initSem.acquire();
         unordered_map<vec3, Chunk *> copy = chunksToInitialize;
         initSem.release();
@@ -88,26 +132,29 @@ namespace Engine::ChunkSpace
             return;
         }
 
-        vector<vec3> keys = ThreadExecutor.Execute<vec3, Chunk *>(copy,
-                                                                  [](vec3 key, Chunk *chunk)
-                                                                  {
-                                                                      chunk->Initialize();
-                                                                  });
+        vector<vec3> keys = ThreadExecutor.Execute<vec3, Chunk *>(
+            copy,
+            [](vec3 key, Chunk *chunk)
+            {
+                chunk->Initialize();
+            });
 
         bufferSem.acquire();
-        ThreadExecutor.Execute<vec3>(keys,
-                                     [&](vec3 key)
-                                     {
-                                         chunksToBuffer[key] = copy[key];
-                                     });
+        ThreadExecutor.Execute<vec3>(
+            keys,
+            [&](vec3 key)
+            {
+                chunksToBuffer[key] = copy[key];
+            });
         bufferSem.release();
 
         initSem.acquire();
-        ThreadExecutor.Execute<vec3>(keys,
-                                     [](vec3 key)
-                                     {
-                                         chunksToInitialize.erase(key);
-                                     });
+        ThreadExecutor.Execute<vec3>(
+            keys,
+            [](vec3 key)
+            {
+                chunksToInitialize.erase(key);
+            });
         initSem.release();
     }
 
@@ -181,6 +228,7 @@ namespace Engine::ChunkSpace
     void ChunkManager::generateChunks(Camera &camera)
     {
         int chunkSize = Config::GetChunkSize();
+        int renderDistance = Config::GetRenderDistance();
         Chunk *center = nullptr;
         for (int i = -2; i < 2; i++)
             for (int j = -2; j < 2; j++)
@@ -193,6 +241,7 @@ namespace Engine::ChunkSpace
                     vec3 vecPos(xPos, yPos, zPos);
                     Chunk *chunk = new Chunk(pos);
                     chunksToMesh[vecPos] = chunk;
+                    // chunksLoaded[vecPos] = chunk;
                     if (chunk->HasVoxels())
                     {
                         if (i == 0 && j == 0)
@@ -207,9 +256,9 @@ namespace Engine::ChunkSpace
         else
         {
             vec3 centerPos = center->GetHighestMiddleVoxel();
-            cout << centerPos.x << "," << centerPos.y << "," << centerPos.z << endl;
             camera.SetCameraPos(centerPos + vec3(0, 3, 0));
         }
+        currentPos = camera.GetCameraPos() * vec3((float)chunkSize);
     }
 };
 

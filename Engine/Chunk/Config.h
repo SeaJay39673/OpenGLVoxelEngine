@@ -38,8 +38,8 @@ namespace Engine::ChunkSpace
     };
 };
 
-int Engine::ChunkSpace::Config::renderDistance = 6;
-int Engine::ChunkSpace::Config::maxHeight = 6;
+int Engine::ChunkSpace::Config::renderDistance = 4;
+int Engine::ChunkSpace::Config::maxHeight = 8;
 int Engine::ChunkSpace::Config::chunkSize = 16;
 
 #endif
