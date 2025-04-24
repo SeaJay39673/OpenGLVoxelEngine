@@ -52,7 +52,6 @@ namespace Engine::MeshSpace
         {
             if (vertices.empty())
             {
-                std::cerr << "Vertices Empty, Can't create mesh\n";
                 return;
             }
             vao.Bind();

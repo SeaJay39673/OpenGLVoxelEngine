@@ -35,7 +35,11 @@ namespace Engine::ChunkSpace
 
     public:
         Chunk(int pos[3]);
-        ~Chunk() {};
+        ~Chunk()
+        {
+            for (const auto &pair : meshMap)
+                delete pair.second;
+        };
         bool HasVoxels();
         void CreateMeshes();
         void Initialize();
@@ -104,7 +108,11 @@ namespace Engine::ChunkSpace
                             voxelsMap[VoxelType::WATER] = true;
                     }
                     if (y < 2)
+                    {
                         GetVoxel(i, j, k) = VoxelType::BLOCK;
+                        if (!voxelsMap[VoxelType::BLOCK])
+                            voxelsMap[VoxelType::BLOCK] = true;
+                    }
                 }
     }
 
@@ -132,10 +140,9 @@ namespace Engine::ChunkSpace
                 // Find the highest solid voxel in this (x, z) column
                 for (int y = chunkSize - 1; y >= 0; y--)
                 {
-                    if (GetVoxel(x, y, z) != VoxelType::AIR)
+                    VoxelType voxelType = GetVoxel(x, y, z);
+                    if (voxelType != VoxelType::AIR)
                     {
-                        VoxelType voxelType = GetVoxel(x, y, z);
-
                         if (x != 0 && checkNeighbor(x - 1, y, z))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::LEFT);
 
