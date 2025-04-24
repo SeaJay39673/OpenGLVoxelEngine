@@ -7,11 +7,10 @@
 #include "Config.h"
 
 #include <vector>
-#include <atomic>
 
 #include <glm/glm.hpp>
 
-using std::vector, glm::vec3, glm::vec2, glm::mat4, std::atomic;
+using std::vector, glm::vec3, glm::vec2, glm::mat4;
 using namespace Engine::Utility;
 using namespace Engine::MeshSpace;
 using namespace Engine::Utility;
@@ -23,20 +22,36 @@ namespace Engine::ChunkSpace
     class Chunk
     {
     private:
-        atomic<bool> loaded, generated;
         int position[3];
         const int chunkSize;
         vector<VoxelType> voxels;
+        unordered_map<VoxelType, bool> voxelsMap;
         unordered_map<VoxelType, Mesh *> meshMap;
-        void loadChunk();
-        void generate();
+        bool checkNeighbor(int x, int y, int z)
+        {
+            VoxelType neighbor = GetVoxel(x, y, z);
+            return neighbor == VoxelType::AIR || neighbor == VoxelType::WATER;
+        }
 
     public:
         Chunk(int pos[3]);
         ~Chunk() {};
+        bool HasVoxels();
+        void CreateMeshes();
         void Initialize();
+        void GenerateBuffers();
         void Render(Shader &shader);
         int *GetPosition() { return position; }
+        vec3 GetHighestMiddleVoxel()
+        {
+            int half = chunkSize / 2;
+            for (int y = chunkSize - 1; y >= 0; y--)
+                if (GetVoxel(half, y, half) != VoxelType::AIR)
+                {
+                    return vec3(half + position[0], y + position[1], half + position[2]);
+                }
+            return vec3(0, 0, 0);
+        }
         VoxelType &GetVoxel(int x, int y, int z)
         {
             return voxels[x * chunkSize * chunkSize + y * chunkSize + z];
@@ -46,8 +61,6 @@ namespace Engine::ChunkSpace
     Chunk::Chunk(int pos[3]) : chunkSize(Config::GetChunkSize())
     {
         voxels.resize(chunkSize * chunkSize * chunkSize, VoxelType::AIR);
-        loaded.store(false);
-        generated.store(false);
         memcpy(position, pos, sizeof(position));
 
         for (int i = 0; i < chunkSize; i++)     // X
@@ -72,9 +85,9 @@ namespace Engine::ChunkSpace
                             type = VoxelType::WOOD;
 
                         GetVoxel(i, k, j) = type;
-                        if (type != VoxelType::AIR && meshMap.find(type) == meshMap.end())
+                        if (type != VoxelType::AIR && !voxelsMap[type])
                         {
-                            meshMap[type] = new Mesh(type, position);
+                            voxelsMap[type] = true;
                         }
                     }
                 }
@@ -87,19 +100,30 @@ namespace Engine::ChunkSpace
                     if (y < 30 && GetVoxel(i, j, k) == VoxelType::AIR)
                     {
                         GetVoxel(i, j, k) = VoxelType::WATER;
+                        if (!voxelsMap[VoxelType::WATER])
+                            voxelsMap[VoxelType::WATER] = true;
                     }
+                    if (y < 2)
+                        GetVoxel(i, j, k) = VoxelType::BLOCK;
                 }
-        if (meshMap.find(VoxelType::WATER) == meshMap.end())
-            meshMap[VoxelType::WATER] = new Mesh(VoxelType::WATER, position);
+    }
+
+    bool Chunk::HasVoxels()
+    {
+        for (const auto &pair : voxelsMap)
+            return true;
+        return false;
+    }
+
+    void Chunk::CreateMeshes()
+    {
+        for (const auto &pair : voxelsMap)
+        {
+            meshMap[pair.first] = new Mesh(pair.first, position);
+        }
     }
 
     void Chunk::Initialize()
-    {
-        loadChunk();
-        loaded.store(true);
-    }
-
-    void Chunk::loadChunk()
     {
         for (int x = 0; x < chunkSize; x++)
         {
@@ -112,48 +136,42 @@ namespace Engine::ChunkSpace
                     {
                         VoxelType voxelType = GetVoxel(x, y, z);
 
-                        // Generate faces exposed to AIR or WATER
-                        if (x == 0 || GetVoxel(x - 1, y, z) == VoxelType::AIR || GetVoxel(x - 1, y, z) == VoxelType::WATER)
+                        if (x != 0 && checkNeighbor(x - 1, y, z))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::LEFT);
 
-                        if (x == chunkSize - 1 || GetVoxel(x + 1, y, z) == VoxelType::AIR || GetVoxel(x + 1, y, z) == VoxelType::WATER)
+                        if (x != chunkSize - 1 && checkNeighbor(x + 1, y, z))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::RIGHT);
 
-                        if (y == 0 || GetVoxel(x, y - 1, z) == VoxelType::AIR || GetVoxel(x, y - 1, z) == VoxelType::WATER)
+                        if (y != 0 && checkNeighbor(x, y - 1, z))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::BOTTOM);
 
-                        if (y == chunkSize - 1 || GetVoxel(x, y + 1, z) == VoxelType::AIR || GetVoxel(x, y + 1, z) == VoxelType::WATER)
+                        if (y != chunkSize - 1 && checkNeighbor(x, y + 1, z))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::TOP);
 
-                        if (z == 0 || GetVoxel(x, y, z - 1) == VoxelType::AIR || GetVoxel(x, y, z - 1) == VoxelType::WATER)
+                        if (z != 0 && checkNeighbor(x, y, z - 1))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::BACK);
 
-                        if (z == chunkSize - 1 || GetVoxel(x, y, z + 1) == VoxelType::AIR || GetVoxel(x, y, z + 1) == VoxelType::WATER)
+                        if (z != chunkSize - 1 && checkNeighbor(x, y, z + 1))
                             meshMap[voxelType]->GenerateFace(x, y, z, Face::FRONT);
 
                         if (voxelType != VoxelType::WATER)
-                            break; // Stop after finding the top voxel in this column
+                            break;
                     }
                 }
             }
         }
     }
 
-    void Chunk::generate()
+    void Chunk::GenerateBuffers()
     {
         for (auto pair : meshMap)
         {
             pair.second->CreateMesh();
         }
-        generated.store(true);
     }
 
     void Chunk::Render(Shader &shader)
     {
-        if (!loaded.load())
-            return;
-        if (!generated.load())
-            generate();
         for (auto &pair : meshMap)
         {
             pair.second->Render(shader);

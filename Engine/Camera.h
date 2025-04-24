@@ -66,6 +66,12 @@ namespace Engine
         }
         void ProcessInput();
 
+        void SetCameraPos(vec3 pos)
+        {
+            cameraPos = pos;
+            updateCamera();
+        }
+
         vec3 const GetCameraPos() const { return cameraPos; }
         vec3 const GetCameraDirection() const { return cameraDirection; }
         mat4 const GetCameraView() const { return view; }

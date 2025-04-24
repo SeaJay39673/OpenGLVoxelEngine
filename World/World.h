@@ -27,7 +27,7 @@ public:
     {
         threadShouldClose.store(false);
         type = GameType::CONCURRENT;
-        ChunkManager::InitChunkManager(camera.GetCameraPos(), 8);
+        ChunkManager::InitChunkManager(camera);
     };
     void Update() override;
     void ProcessInput() override;
