@@ -37,7 +37,7 @@ namespace Engine
 
         void SlideFront(float speed)
         {
-            cameraPos += speed * cameraFront;
+            cameraPos += speed * vec3(cameraFront.x, 0, cameraFront.z);
             updateCamera();
         }
         void SlideSide(float speed)
