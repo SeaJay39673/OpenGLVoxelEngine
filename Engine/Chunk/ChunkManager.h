@@ -171,7 +171,7 @@ namespace Engine::ChunkSpace
 
             for (int x = -radius; x <= radius; x++)
                 for (int z = -radius; z <= radius; z++)
-                    for (int y = Config::GetMaxHeight(); y >= 0; y--)
+                    for (int y = -radius; y <= radius; y++)
                     {
                         vec3 chunkPos = (cameraChunkPos + vec3(x, y, z)) * (float)chunkSize;
 
