@@ -24,17 +24,5 @@ Then run "CMake: Build" and finally "CMake: Debug";
 
 ## TODO:
 * ### Optimize chunk mesh
-    - Only render the top faces exposed to air
+    - Only render the top faces exposed to air $\checkmark$
     - Have chunks talk to neighbors so touching voxels dont render inside faces
-
-* ### Dynamically load and unload chunks
-    - Currently not rendering chunks in view frustum
-    - Can take this further by unloading chunks outside of render distance, deleting the buffer objects to save memory on the GPU
-    - Need to reload the chunks when it gets inside the render distance,
-    prioritizing chunks nearest the camera position (and within the view frustum).
-
-* ### Infinite terrain generation
-    - Building off of loading and unloading chunks within radius.
-    - If radius surrounding camera position isn't filled with chunks, create chunk on Render Thread.
-    - Update will then load the chunks.
-    - Render will finalize buffer objects and then render the chunks. 
