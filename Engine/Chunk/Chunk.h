@@ -7,10 +7,11 @@
 #include "Config.h"
 
 #include <vector>
+#include <unordered_set>
 
 #include <glm/glm.hpp>
 
-using std::vector, glm::vec3, glm::vec2, glm::mat4;
+using std::vector, glm::vec3, glm::vec2, glm::mat4, std::unordered_set;
 using namespace Engine::Utility;
 using namespace Engine::MeshSpace;
 using namespace Engine::Utility;
@@ -25,7 +26,7 @@ namespace Engine::ChunkSpace
         int position[3];
         const int chunkSize;
         vector<VoxelType> voxels;
-        unordered_map<VoxelType, bool> voxelsMap;
+        unordered_set<VoxelType> voxelsHash;
         unordered_map<VoxelType, Mesh *> meshMap;
         bool checkNeighbor(int x, int y, int z)
         {
@@ -90,9 +91,9 @@ namespace Engine::ChunkSpace
                             type = VoxelType::WOOD;
 
                         GetVoxel(i, k, j) = type;
-                        if (type != VoxelType::AIR && !voxelsMap[type])
+                        if (type != VoxelType::AIR && voxelsHash.find(type) == voxelsHash.end())
                         {
-                            voxelsMap[type] = true;
+                            voxelsHash.insert(type);
                         }
                     }
                 }
@@ -105,30 +106,30 @@ namespace Engine::ChunkSpace
                     if (y < 30 && GetVoxel(i, j, k) == VoxelType::AIR)
                     {
                         GetVoxel(i, j, k) = VoxelType::WATER;
-                        if (!voxelsMap[VoxelType::WATER])
-                            voxelsMap[VoxelType::WATER] = true;
+                        if (voxelsHash.find(VoxelType::WATER) == voxelsHash.end())
+                            voxelsHash.insert(VoxelType::WATER);
                     }
                     if (y < 2)
                     {
                         GetVoxel(i, j, k) = VoxelType::BLOCK;
-                        if (!voxelsMap[VoxelType::BLOCK])
-                            voxelsMap[VoxelType::BLOCK] = true;
+                        if (voxelsHash.find(VoxelType::BLOCK) == voxelsHash.end())
+                            voxelsHash.insert(VoxelType::BLOCK);
                     }
                 }
     }
 
     bool Chunk::HasVoxels()
     {
-        for (const auto &pair : voxelsMap)
+        for (const VoxelType &type : voxelsHash)
             return true;
         return false;
     }
 
     void Chunk::CreateMeshes()
     {
-        for (const auto &pair : voxelsMap)
+        for (const VoxelType &type : voxelsHash)
         {
-            meshMap[pair.first] = new Mesh(pair.first, position);
+            meshMap[type] = new Mesh(type, position);
         }
     }
 
