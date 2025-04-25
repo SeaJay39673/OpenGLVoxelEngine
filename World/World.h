@@ -68,6 +68,7 @@ void World::Start()
     _app->RegisterFrameSizeCallback("ViewPort",
                                     [this](int width, int height)
                                     {
+                                        cout << width << ", " << height << endl;
                                         glViewport(0, 0, width, height);
                                         shader.UpdatePerspective(width, height, (float)Config::GetRenderDistance() * Config::GetChunkSize() - Config::GetChunkSize());
                                     });

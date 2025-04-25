@@ -190,8 +190,16 @@ namespace Engine::ChunkSpace
             currentPos = cameraChunkPos;
         }
 
-        int chunksCreated = ThreadExecutor.Execute(
-            chunksToCreate,
+        vector<vec3> create;
+
+        while (!chunksToCreate.empty())
+        {
+            create.push_back(chunksToCreate.top().second);
+            chunksToCreate.pop();
+        }
+
+        int chunksCreated = ThreadExecutor.Execute<vec3>(
+            create,
             [](vec3 pos)
             {
                 int loc[3] = {(int)pos.x, (int)pos.y, (int)pos.z};
@@ -204,11 +212,6 @@ namespace Engine::ChunkSpace
                 chunksLoaded[pos] = chunk;
                 loadSem.release();
             });
-
-        for (int i = 0; i < chunksCreated; i++)
-        {
-            chunksToCreate.pop();
-        }
     }
 
     void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 &cameraPos)

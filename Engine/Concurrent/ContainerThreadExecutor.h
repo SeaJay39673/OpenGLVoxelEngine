@@ -50,7 +50,7 @@ namespace Engine::Concurrent
             {
                 keys.push_back(pair.first);
                 threads.emplace_back(
-                    [&]()
+                    [task, pair]()
                     {
                         task(pair.first, pair.second);
                     });
@@ -61,21 +61,6 @@ namespace Engine::Concurrent
                 t.join();
             threads.clear();
             return keys;
-        }
-
-        template <typename Queue>
-        int Execute(Queue queue, function<void(typename Queue::value_type::second_type)> task)
-        {
-            int count = 0;
-            vector<typename Queue::value_type::second_type> vec;
-            while (!queue.empty() && count < numThreads)
-            {
-                const auto &pair = queue.top();
-                vec.push_back(pair.second);
-                queue.pop();
-                count++;
-            }
-            return Execute(vec, task);
         }
     };
 };

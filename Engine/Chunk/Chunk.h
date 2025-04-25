@@ -39,6 +39,7 @@ namespace Engine::ChunkSpace
         {
             for (const auto &pair : meshMap)
                 delete pair.second;
+            meshMap.clear();
         };
         bool HasVoxels();
         void CreateMeshes();
