@@ -68,8 +68,11 @@ namespace Engine::ChunkSpace
 
         static void generateInitialChunks(Camera &camera);
 
+        static unordered_map<vec3, Chunk *> setChunkNeighbors(Chunk *chunk, vec3 pos);
         static void generateChunks(vec3 cameraPos);
         static void unloadChunks(vec3 cameraPos);
+
+        static void removeChunk(vec3 pos);
 
         static void meshChunks();
         static void bufferChunks();
@@ -77,6 +80,7 @@ namespace Engine::ChunkSpace
     public:
         static void InitChunkManager(Camera &camera, int renderDistance = 8)
         {
+            glDisable(GL_CULL_FACE);
             Texture::InitializeTextures();
             Config::SetRenderDistance(renderDistance);
             generateInitialChunks(camera);
@@ -137,26 +141,61 @@ namespace Engine::ChunkSpace
             chunksToUnload,
             [](vec3 pos)
             {
-                meshSem.acquire();
-                chunksToMesh.erase(pos);
-                meshSem.release();
-
-                initSem.acquire();
-                chunksToInitialize.erase(pos);
-                initSem.release();
-
-                bufferSem.acquire();
-                chunksToBuffer.erase(pos);
-                bufferSem.release();
-
-                renderSem.acquire();
-                chunksToRender.erase(pos);
-                renderSem.release(); // Fixed here
+                removeChunk(pos);
 
                 deleteSem.acquire();
                 chunksToDelete.insert(pos);
                 deleteSem.release();
             });
+    }
+
+    unordered_map<vec3, Chunk *> ChunkManager::setChunkNeighbors(Chunk *chunk, vec3 pos)
+    {
+        unordered_map<vec3, Chunk *> reload;
+        // Set neighbors by checking adjacent chunk positions
+        unordered_map<ChunkNeighbor, vec3> neighborMap =
+            {
+                {ChunkNeighbor::LEFT, pos + vec3(-Config::GetChunkSize(), 0, 0)},
+                {ChunkNeighbor::RIGHT, pos + vec3(Config::GetChunkSize(), 0, 0)},
+                {ChunkNeighbor::BACK, pos + vec3(0, 0, -Config::GetChunkSize())},
+                {ChunkNeighbor::FRONT, pos + vec3(0, 0, Config::GetChunkSize())},
+                {ChunkNeighbor::BOTTOM, pos + vec3(0, -Config::GetChunkSize(), 0)},
+                {ChunkNeighbor::TOP, pos + vec3(0, Config::GetChunkSize(), 0)}};
+
+        // For each direction, check if the neighboring chunk exists
+        for (const auto &pair : neighborMap)
+        {
+            vec3 neighborPos = pair.second;
+
+            // If the neighbor exists in the chunksToMesh map, set the neighbor
+
+            if (chunksLoaded.find(neighborPos) != chunksLoaded.end())
+            {
+                chunk->SetNeighbor(chunksLoaded[neighborPos], pair.first);
+                reload[pos] = chunksLoaded[pos];
+                reload[neighborPos] = chunksLoaded[neighborPos];
+            }
+        }
+        return reload;
+    }
+
+    void ChunkManager::removeChunk(vec3 pos)
+    {
+        meshSem.acquire();
+        chunksToMesh.erase(pos);
+        meshSem.release();
+
+        initSem.acquire();
+        chunksToInitialize.erase(pos);
+        initSem.release();
+
+        bufferSem.acquire();
+        chunksToBuffer.erase(pos);
+        bufferSem.release();
+
+        renderSem.acquire();
+        chunksToRender.erase(pos);
+        renderSem.release();
     }
 
     void ChunkManager::generateChunks(vec3 cameraPos)
@@ -212,6 +251,13 @@ namespace Engine::ChunkSpace
                 chunksLoaded[pos] = chunk;
                 loadSem.release();
             });
+
+        for (int i = 0; i < chunksCreated; i++)
+        {
+            loadSem.acquire();
+            unordered_map<vec3, Chunk *> temp = setChunkNeighbors(chunksLoaded[create[i]], create[i]);
+            loadSem.release();
+        }
     }
 
     void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 &cameraPos)

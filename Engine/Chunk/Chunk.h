@@ -20,6 +20,16 @@ using namespace Engine::ChunkSpace::Voxel;
 namespace Engine::ChunkSpace
 {
 
+    enum class ChunkNeighbor
+    {
+        LEFT = 0,
+        RIGHT,
+        TOP,
+        BOTTOM,
+        FRONT,
+        BACK
+    };
+
     class Chunk
     {
     private:
@@ -28,26 +38,24 @@ namespace Engine::ChunkSpace
         vector<VoxelType> voxels;
         unordered_set<VoxelType> voxelsHash;
         unordered_map<VoxelType, Mesh *> meshMap;
-        bool checkNeighbor(int x, int y, int z)
-        {
-            VoxelType neighbor = GetVoxel(x, y, z);
-            return neighbor == VoxelType::AIR || neighbor == VoxelType::WATER;
-        }
+        Chunk *neighbors[6];
+        bool checkNeighbor(int x, int y, int z);
 
     public:
         Chunk(int pos[3]);
-        ~Chunk()
-        {
-            for (const auto &pair : meshMap)
-                delete pair.second;
-            meshMap.clear();
-        };
+        ~Chunk();
         bool HasVoxels();
+        void DeleteMeshes();
         void CreateMeshes();
         void Initialize();
         void GenerateBuffers();
         void Render(Shader &shader);
         int *GetPosition() { return position; }
+        void SetNeighbor(Chunk *neighbor, ChunkNeighbor direction);
+        bool HasNeighbor(ChunkNeighbor direction)
+        {
+            return neighbors[(int)direction] != nullptr;
+        }
         vec3 GetHighestMiddleVoxel()
         {
             int half = chunkSize / 2;
@@ -66,7 +74,11 @@ namespace Engine::ChunkSpace
 
     Chunk::Chunk(int pos[3]) : chunkSize(Config::GetChunkSize())
     {
-        voxels.resize(chunkSize * chunkSize * chunkSize, VoxelType::AIR);
+        for (int i = 0; i < 6; i++)
+        {
+            neighbors[i] = nullptr;
+        }
+        voxels.resize((chunkSize) * (chunkSize) * (chunkSize), VoxelType::AIR);
         memcpy(position, pos, sizeof(position));
 
         for (int i = 0; i < chunkSize; i++)     // X
@@ -116,6 +128,79 @@ namespace Engine::ChunkSpace
                             voxelsHash.insert(VoxelType::BLOCK);
                     }
                 }
+    }
+
+    Chunk::~Chunk()
+    {
+
+        for (const auto &pair : meshMap)
+            delete pair.second;
+        for (int i = 0; i < 6; i++)
+        {
+            if (neighbors[i] == nullptr)
+                continue;
+            switch ((ChunkNeighbor)i)
+            {
+            case ChunkNeighbor::LEFT:
+                neighbors[i]->SetNeighbor(nullptr, ChunkNeighbor::RIGHT);
+                break;
+            case ChunkNeighbor::RIGHT:
+                neighbors[i]->SetNeighbor(nullptr, ChunkNeighbor::LEFT);
+                break;
+            case ChunkNeighbor::TOP:
+                neighbors[i]->SetNeighbor(nullptr, ChunkNeighbor::BOTTOM);
+                break;
+            case ChunkNeighbor::BOTTOM:
+                neighbors[i]->SetNeighbor(nullptr, ChunkNeighbor::TOP);
+                break;
+            case ChunkNeighbor::FRONT:
+                neighbors[i]->SetNeighbor(nullptr, ChunkNeighbor::BACK);
+                break;
+            case ChunkNeighbor::BACK:
+                neighbors[i]->SetNeighbor(nullptr, ChunkNeighbor::FRONT);
+                break;
+            }
+        }
+        meshMap.clear();
+    }
+
+    bool Chunk::checkNeighbor(int x, int y, int z)
+    {
+        VoxelType neighbor = GetVoxel(x, y, z);
+        return neighbor == VoxelType::AIR || neighbor == VoxelType::WATER;
+    }
+
+    void Chunk::SetNeighbor(Chunk *neighbor, ChunkNeighbor direction)
+    {
+        neighbors[(int)direction] = neighbor;
+
+        ChunkNeighbor opposite;
+        switch (direction)
+        {
+        case ChunkNeighbor::LEFT:
+            opposite = ChunkNeighbor::RIGHT;
+            break;
+        case ChunkNeighbor::RIGHT:
+            opposite = ChunkNeighbor::LEFT;
+            break;
+        case ChunkNeighbor::TOP:
+            opposite = ChunkNeighbor::BOTTOM;
+            break;
+        case ChunkNeighbor::BOTTOM:
+            opposite = ChunkNeighbor::TOP;
+            break;
+        case ChunkNeighbor::FRONT:
+            opposite = ChunkNeighbor::BACK;
+            break;
+        case ChunkNeighbor::BACK:
+            opposite = ChunkNeighbor::FRONT;
+            break;
+        }
+
+        if (neighbor != nullptr && !neighbor->HasNeighbor(opposite))
+        {
+            neighbor->SetNeighbor(this, opposite);
+        }
     }
 
     bool Chunk::HasVoxels()
