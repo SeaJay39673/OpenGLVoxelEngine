@@ -68,7 +68,7 @@ namespace Engine::ChunkSpace
         }
         VoxelType &GetVoxel(int x, int y, int z)
         {
-            return voxels[x * chunkSize * chunkSize + y * chunkSize + z];
+            return voxels[x * (chunkSize + 2) * (chunkSize + 2) + y * (chunkSize + 2) + z];
         }
     };
 
@@ -78,21 +78,22 @@ namespace Engine::ChunkSpace
         {
             neighbors[i] = nullptr;
         }
-        voxels.resize((chunkSize) * (chunkSize) * (chunkSize), VoxelType::AIR);
+        int extendedSize = chunkSize + 2;
+        voxels.resize((extendedSize) * (extendedSize) * (extendedSize), VoxelType::AIR);
         memcpy(position, pos, sizeof(position));
 
-        for (int i = 0; i < chunkSize; i++)     // X
-            for (int j = 0; j < chunkSize; j++) // Z
+        for (int i = 0; i < extendedSize; i++)     // X
+            for (int j = 0; j < extendedSize; j++) // Z
             {
-                double noiseValue = Generator::Noise2D_01((float)(position[0] + i), (float)(position[2] + j));
+                double noiseValue = Generator::Noise2D_01((float)(position[0] + i - 1), (float)(position[2] + j - 1));
                 int height = (int)(noiseValue * Config::GetMaxHeight() * chunkSize);
-                for (int k = 0; k < chunkSize; k++) // Y
+                for (int k = 0; k < extendedSize; k++) // Y
                 {
-                    int y = (k + position[1]);
+                    int y = (k + position[1] - 1);
                     if (y < height)
                     {
                         VoxelType type = VoxelType::AIR;
-                        noiseValue = Generator::Noise3D_01((float)position[0] + i, (float)position[1] + k, (float)position[2] + j);
+                        noiseValue = Generator::Noise3D_01((float)position[0] + i - 1, (float)position[1] + k - 1, (float)position[2] + j - 1);
                         if (noiseValue > .7)
                             type = VoxelType::BRICK;
                         else if (noiseValue > .6)
@@ -110,11 +111,11 @@ namespace Engine::ChunkSpace
                     }
                 }
             }
-        for (int i = 0; i < chunkSize; i++)
-            for (int j = 0; j < chunkSize; j++)
-                for (int k = 0; k < chunkSize; k++)
+        for (int i = 1; i < chunkSize + 1; i++)
+            for (int j = 1; j < chunkSize + 1; j++)
+                for (int k = 1; k < chunkSize + 1; k++)
                 {
-                    int y = (j + position[1]);
+                    int y = (j + position[1] - 1);
                     if (y < 30 && GetVoxel(i, j, k) == VoxelType::AIR)
                     {
                         GetVoxel(i, j, k) = VoxelType::WATER;
@@ -220,33 +221,33 @@ namespace Engine::ChunkSpace
 
     void Chunk::Initialize()
     {
-        for (int x = 0; x < chunkSize; x++)
+        for (int x = 1; x < chunkSize + 1; x++)
         {
-            for (int z = 0; z < chunkSize; z++)
+            for (int z = 1; z < chunkSize + 1; z++)
             {
                 // Find the highest solid voxel in this (x, z) column
-                for (int y = chunkSize - 1; y >= 0; y--)
+                for (int y = chunkSize; y >= 1; y--)
                 {
                     VoxelType voxelType = GetVoxel(x, y, z);
                     if (voxelType != VoxelType::AIR)
                     {
-                        if (x != 0 && checkNeighbor(x - 1, y, z))
-                            meshMap[voxelType]->GenerateFace(x, y, z, Face::LEFT);
+                        if (checkNeighbor(x - 1, y, z))
+                            meshMap[voxelType]->GenerateFace(x - 1, y - 1, z - 1, Face::LEFT);
 
-                        if (x != chunkSize - 1 && checkNeighbor(x + 1, y, z))
-                            meshMap[voxelType]->GenerateFace(x, y, z, Face::RIGHT);
+                        if (checkNeighbor(x + 1, y, z))
+                            meshMap[voxelType]->GenerateFace(x - 1, y - 1, z - 1, Face::RIGHT);
 
-                        if (y != 0 && checkNeighbor(x, y - 1, z))
-                            meshMap[voxelType]->GenerateFace(x, y, z, Face::BOTTOM);
+                        if (checkNeighbor(x, y - 1, z))
+                            meshMap[voxelType]->GenerateFace(x - 1, y - 1, z - 1, Face::BOTTOM);
 
-                        if (y != chunkSize - 1 && checkNeighbor(x, y + 1, z))
-                            meshMap[voxelType]->GenerateFace(x, y, z, Face::TOP);
+                        if (checkNeighbor(x, y + 1, z))
+                            meshMap[voxelType]->GenerateFace(x - 1, y - 1, z - 1, Face::TOP);
 
-                        if (z != 0 && checkNeighbor(x, y, z - 1))
-                            meshMap[voxelType]->GenerateFace(x, y, z, Face::BACK);
+                        if (checkNeighbor(x, y, z - 1))
+                            meshMap[voxelType]->GenerateFace(x - 1, y - 1, z - 1, Face::BACK);
 
-                        if (z != chunkSize - 1 && checkNeighbor(x, y, z + 1))
-                            meshMap[voxelType]->GenerateFace(x, y, z, Face::FRONT);
+                        if (checkNeighbor(x, y, z + 1))
+                            meshMap[voxelType]->GenerateFace(x - 1, y - 1, z - 1, Face::FRONT);
 
                         if (voxelType != VoxelType::WATER)
                             break;
