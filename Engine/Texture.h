@@ -76,7 +76,6 @@ namespace Engine
             RegisterTexture(VoxelType::WOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 1);
             RegisterTexture(VoxelType::BLOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 2);
             RegisterTexture(VoxelType::WATER, "./Resources/Textures/Textures.png", 3, 0, 1, 1);
-            RegisterTexture(VoxelType::BLOCK, "./Resources/Textures/Textures.png", 3, 0, 1, 0);
 
             RegisterTexture(VoxelType::TREE, "./Resources/Textures/Sprites.png", 4, 5, 2, 1);
             RegisterTexture(VoxelType::POTION, "./Resources/Textures/Sprites.png", 4, 5, 1, 2);

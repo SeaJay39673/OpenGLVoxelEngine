@@ -73,9 +73,9 @@ namespace Engine::ChunkSpace
         static void unloadChunks(vec3 cameraPos);
 
         static void removeChunk(vec3 pos);
-
         static void meshChunks();
         static void bufferChunks();
+        static void updateCollisions(Camera &camera);
 
     public:
         static void InitChunkManager(Camera &camera, int renderDistance = 8)
@@ -87,7 +87,7 @@ namespace Engine::ChunkSpace
         }
 
         static void UpdateChunks(const Frustum &frustum, const vec3 &cameraPos);
-        static void RenderChunks(Shader &shader, const Frustum &frustum);
+        static void RenderChunks(Shader &shader, const Frustum &frustum, Camera &camera);
     };
 
     vec3 ChunkManager::currentPos;
@@ -353,8 +353,28 @@ namespace Engine::ChunkSpace
         bufferSem.release();
     }
 
-    void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
+    void ChunkManager::updateCollisions(Camera &camera)
     {
+        vec3 camPos = camera.GetCameraPos();
+        vec3 min = camPos - vec3(.4f, 1.8, .4f);
+        vec3 max = camPos + vec3(.4f, 0, .4f);
+
+        int chunkSize = Config::GetChunkSize();
+        vec3 cameraChunkPos = floor(camPos / (float)chunkSize);
+        cameraChunkPos *= chunkSize;
+
+        loadSem.acquire();
+        if (chunksLoaded.find(cameraChunkPos) != chunksLoaded.end())
+        {
+            camera.SetCameraPos(camPos + chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max));
+        }
+        loadSem.release();
+    }
+
+    void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum, Camera &camera)
+    {
+        updateCollisions(camera);
+
         deleteSem.acquire();
         unordered_set<vec3> copyDelete = chunksToDelete;
         deleteSem.release();
@@ -400,11 +420,9 @@ namespace Engine::ChunkSpace
                     vec3 vecPos(xPos, yPos, zPos);
                     Chunk *chunk = new Chunk(pos);
                     chunksToMesh[vecPos] = chunk;
-                    if (chunk->HasVoxels())
+                    if (chunk->HasVoxels() && i == 0 && j == 0 && center == nullptr)
                     {
-                        if (i == 0 && j == 0)
-                            center = chunk;
-                        break;
+                        center = chunk;
                     }
                 }
         if (center == nullptr)

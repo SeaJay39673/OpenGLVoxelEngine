@@ -60,7 +60,7 @@ void World::Update()
 void World::Render()
 {
     shader.Use();
-    ChunkManager::RenderChunks(shader, frustum);
+    ChunkManager::RenderChunks(shader, frustum, camera);
 };
 
 void World::Start()

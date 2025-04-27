@@ -5,6 +5,7 @@
 #include "Voxel.h"
 #include "../Utility/Generator.h"
 #include "Config.h"
+#include "../Physics/Collisions.h"
 
 #include <vector>
 #include <unordered_set>
@@ -64,12 +65,13 @@ namespace Engine::ChunkSpace
                 {
                     return vec3(half + position[0], y + position[1], half + position[2]);
                 }
-            return vec3(0, 0, 0);
+            return vec3(half + position[0], position[1], half + position[2]);
         }
         VoxelType &GetVoxel(int x, int y, int z)
         {
             return voxels[x * (chunkSize + 2) * (chunkSize + 2) + y * (chunkSize + 2) + z];
         }
+        vec3 ResolveCollisions(const vec3 &cameraMin, const vec3 &cameraMax);
     };
 
     Chunk::Chunk(int pos[3]) : chunkSize(Config::GetChunkSize())
@@ -94,14 +96,10 @@ namespace Engine::ChunkSpace
                     {
                         VoxelType type = VoxelType::AIR;
                         noiseValue = Generator::Noise3D_01((float)position[0] + i - 1, (float)position[1] + k - 1, (float)position[2] + j - 1);
-                        if (noiseValue > .7)
+                        if (noiseValue > .5)
                             type = VoxelType::BRICK;
-                        else if (noiseValue > .6)
-                            type = VoxelType::BRICK_RED;
-                        else if (noiseValue > .58)
-                            type = VoxelType::EYE;
                         else
-                            type = VoxelType::WOOD;
+                            type = VoxelType::BRICK_RED;
 
                         GetVoxel(i, k, j) = type;
                         if (type != VoxelType::AIR && voxelsHash.find(type) == voxelsHash.end())
@@ -271,6 +269,32 @@ namespace Engine::ChunkSpace
         {
             pair.second->Render(shader);
         }
+    }
+
+    vec3 Chunk::ResolveCollisions(const vec3 &cameraMin, const vec3 &cameraMax)
+    {
+        vec3 correction(0.0f);
+        for (int x = 0; x <= chunkSize + 1; ++x)
+        {
+            for (int y = 0; y <= chunkSize + 1; ++y)
+            {
+                for (int z = 0; z <= chunkSize + 1; ++z)
+                {
+                    VoxelType t = GetVoxel(x, y, z);
+                    if (t == VoxelType::AIR || t == VoxelType::WATER)
+                        continue;
+                    vec3 vMin{position[0] + (x - 1),
+                              position[1] + (y - 1),
+                              position[2] + (z - 1)};
+                    vec3 vMax = vMin + vec3(1.0f);
+                    vec3 cmn = cameraMin + correction;
+                    vec3 cmx = cameraMax + correction;
+                    vec3 mtv = Collisions::Collide(cmn, cmx, vMin, vMax);
+                    correction += mtv;
+                }
+            }
+        }
+        return correction;
     }
 }
 
