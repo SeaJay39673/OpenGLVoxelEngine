@@ -17,6 +17,7 @@ using namespace Engine::Utility;
 using namespace Engine::MeshSpace;
 using namespace Engine::Utility;
 using namespace Engine::ChunkSpace::Voxel;
+using namespace Engine::Physics;
 
 namespace Engine::ChunkSpace
 {

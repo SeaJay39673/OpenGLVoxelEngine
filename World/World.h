@@ -10,7 +10,7 @@
 #include <chrono>
 #include <atomic>
 
-using std::string, std::thread, Engine::Camera, Engine::Shader, Engine::ChunkSpace::ChunkManager, Engine::ChunkSpace::Chunk, Engine::ChunkSpace::Config;
+using std::string, std::thread, Engine::Camera, Engine::Shader, Engine::ChunkSpace::ChunkManager, Engine::ChunkSpace::Chunk, Engine::ChunkSpace::Config, Engine::Entities::Player;
 
 using namespace std::chrono;
 
@@ -18,26 +18,26 @@ class World : public Game
 {
 private:
     atomic<bool> threadShouldClose;
-    Camera camera;
+    Player player;
     Shader shader;
     Frustum frustum;
 
 public:
-    World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), camera(&shader)
+    World() : shader("./Resources/Shaders/basic.vert", "./Resources/Shaders/basic.frag"), player(*(new Camera(&shader)))
     {
         threadShouldClose.store(false);
         type = GameType::CONCURRENT;
-        ChunkManager::InitChunkManager(camera);
+        ChunkManager::InitChunkManager(player);
     };
-    void Update() override;
+    void Update(duration<float> dt) override;
     void ProcessInput() override;
-    void Render() override;
+    void Render(duration<float> dt) override;
     void Start() override;
 };
 
 void World::ProcessInput()
 {
-    camera.ProcessInput();
+    player.ProcessInput();
     if (Keyboard::keys[GLFW_KEY_R])
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     if (Keyboard::keys[GLFW_KEY_F])
@@ -51,16 +51,16 @@ void World::ProcessInput()
     Mouse::dely = 0;
 };
 
-void World::Update()
+void World::Update(duration<float> dt)
 {
-    frustum.Update(shader.GetProjection(), camera.GetCameraView());
-    ChunkManager::UpdateChunks(frustum, camera.GetCameraPos());
+    frustum.Update(shader.GetProjection(), player.GetCamera().GetCameraView());
+    ChunkManager::UpdateChunks(frustum, player);
 }
 
-void World::Render()
+void World::Render(duration<float> dt)
 {
     shader.Use();
-    ChunkManager::RenderChunks(shader, frustum, camera);
+    ChunkManager::RenderChunks(shader, frustum, player, dt);
 };
 
 void World::Start()
@@ -80,7 +80,7 @@ void World::Start()
         {
             while (!threadShouldClose.load())
             {
-                Update();
+                Update(duration<float>(0));
                 std::this_thread::sleep_for(std::chrono::milliseconds(60));
             }
         });

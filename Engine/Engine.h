@@ -21,4 +21,9 @@
 #include "Chunk/Voxel.h"
 #include "Chunk/Config.h"
 
+#include "Physics/Collisions.h"
+#include "Physics/Gravity.h"
+
+#include "Entities/Player.h"
+
 #endif

@@ -52,6 +52,8 @@ namespace Application
             const int targetFPS = 120;
             const auto frameDuration = duration<double, std::milli>(1000.0 / targetFPS);
 
+            auto deltaPrevious = high_resolution_clock::now();
+
             auto previousTime = high_resolution_clock::now();
             auto secondTime = high_resolution_clock::now();
 
@@ -65,17 +67,20 @@ namespace Application
                 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+                // --- Frame Timing Control ---
+
+                auto now = high_resolution_clock::now();
+                duration<float> dt(now - deltaPrevious);
+                deltaPrevious = now;
                 _game->ProcessInput();
                 if (_game->GameType() == GameType::SEQUENTIAL)
-                    _game->Update();
-                _game->Render();
+                    _game->Update(dt);
+                _game->Render(dt);
 
                 NextFrame();
 
-                // --- Frame Timing Control ---
                 auto frameEnd = high_resolution_clock::now();
                 auto elapsed = frameEnd - frameStart;
-
                 if (elapsed < frameDuration)
                 {
                     // Busy-wait for the final precision

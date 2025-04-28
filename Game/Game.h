@@ -3,8 +3,11 @@
 #define GAME_H
 
 #include <functional>
+#include <chrono>
 
 using std::function;
+using namespace std::chrono;
+
 namespace Application
 {
     class App;
@@ -30,8 +33,8 @@ namespace GameSpace
         virtual ~Game() {}
         GameType GameType() { return type; }
         virtual void ProcessInput() = 0;
-        virtual void Update() = 0;
-        virtual void Render() = 0;
+        virtual void Update(duration<float> dt) = 0;
+        virtual void Render(duration<float> dt) = 0;
         void SetApp(App *app) { _app = app; };
         virtual void Start() = 0;
     };
