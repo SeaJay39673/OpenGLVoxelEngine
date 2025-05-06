@@ -7,6 +7,12 @@ namespace IO::Mouse
     static double delx = 0, dely = 0;
     static bool firstMouse = true;
 
+    /**
+     * @brief Callback function for mouse movement.
+     *
+     * @param xpos
+     * @param ypos
+     */
     void MouseCursorCallback(double xpos, double ypos)
     {
         if (firstMouse)

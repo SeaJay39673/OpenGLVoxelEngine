@@ -8,10 +8,22 @@ using glm::vec3;
 
 namespace Engine::Physics
 {
+    /**
+     * @brief A class for handling collisions between two axis-aligned bounding boxes (AABBs).
+     *
+     */
     class Collisions
     {
     public:
-        // Collisions.h
+        /**
+         * @brief Check for collision between two AABBs and return the minimum translation vector (MTV) to resolve the collision.
+         *
+         * @param min1
+         * @param max1
+         * @param min2
+         * @param max2
+         * @return vec3
+         */
         static vec3 Collide(vec3 min1, vec3 max1,
                             vec3 min2, vec3 max2)
         {

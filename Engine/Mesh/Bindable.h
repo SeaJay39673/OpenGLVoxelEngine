@@ -3,6 +3,10 @@
 
 namespace Engine::MeshSpace
 {
+    /**
+     * @brief An interface for bindable objects in the rendering pipeline.
+     *
+     */
     class Bindable
     {
     public:

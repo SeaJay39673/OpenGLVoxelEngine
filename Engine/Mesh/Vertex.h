@@ -3,6 +3,10 @@
 
 namespace Engine::MeshSpace
 {
+    /**
+     * @brief A struct for handling vertex data.
+     *
+     */
     struct Vertex
     {
         int position[3];

@@ -7,6 +7,14 @@
 namespace IO::Keyboard
 {
     static bool keys[1024];
+    /**
+     * @brief Callback function for keyboard input.
+     *
+     * @param key The key that was pressed or released.
+     * @param scancode The scancode of the key.
+     * @param action The action that was performed (pressed or released).
+     * @param mods
+     */
     void KeyboardCallback(int key, int scancode, int action, int mods)
     {
         if (action == GLFW_PRESS)
