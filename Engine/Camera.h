@@ -77,7 +77,7 @@ namespace Engine
      * @param shader The shader to use for the camera.
      * @param up Which direction is up. Default is (0, 1, 0).
      */
-    Camera::Camera(Shader *shader, vec3 up = vec3(0, 1, 0)) : shader(shader), view(1.f), up(up), yaw(-90), pitch(0), roll(0)
+    Camera::Camera(Shader *shader, vec3 up) : shader(shader), view(1.f), up(up), yaw(-90), pitch(0), roll(0)
     {
         // Only used in setup
         vec3 cameraTarget = vec3(0, 0, -1); // Where the camera is looking at
@@ -121,35 +121,35 @@ namespace Engine
         if (Mouse::dely)
             Pitch((float)(-Mouse::dely * 0.08));
     }
-}
 
-//====| Private Methods |====//
+    //====| Private Methods |====//
 
-/**
- * @brief Update the camera view matrix and shader uniform.
- *
- */
-void Camera::updateCamera()
-{
-    // Calculate new camera direction
-    cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraDirection.y = sin(glm::radians(pitch));
-    cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    /**
+     * @brief Update the camera view matrix and shader uniform.
+     *
+     */
+    void Camera::updateCamera()
+    {
+        // Calculate new camera direction
+        cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        cameraDirection.y = sin(glm::radians(pitch));
+        cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
 
-    // Recalculate camera variables
-    cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-    cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
-    cameraFront = glm::normalize(cameraDirection);
+        // Recalculate camera variables
+        cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+        cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
+        cameraFront = glm::normalize(cameraDirection);
 
-    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-    shader->SetMat4f("view", view);
+        shader->SetMat4f("view", view);
 
-    // Update shader information
-    // if (shader != nullptr)
-    // {
-    //     shader->setVec3("viewPos", cameraPos);
-    // }
-}
+        // Update shader information
+        // if (shader != nullptr)
+        // {
+        //     shader->setVec3("viewPos", cameraPos);
+        // }
+    }
+};
 
 #endif
