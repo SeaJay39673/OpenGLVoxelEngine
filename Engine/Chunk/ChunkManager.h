@@ -41,8 +41,25 @@ namespace Engine::ChunkSpace
         }
     };
 
+    /**
+     * @brief ChunkManager class for managing chunks in a 3D space.
+     *
+     */
     class ChunkManager
     {
+    public:
+        static void InitChunkManager(vec3 &playerPos, int renderDistance = 8)
+        {
+            glDisable(GL_CULL_FACE);
+            Texture::InitializeTextures();
+            Config::SetRenderDistance(renderDistance);
+            generateInitialChunks(playerPos);
+        }
+
+        static void UpdateChunks(const Frustum &frustum, const vec3 &playerPos);
+        static void RenderChunks(Shader &shader, const Frustum &frustum);
+        static vec3 HandleCollisions(vec3 playerPos, vec3 min, vec3 max);
+
     private:
         static vec3 currentPos;
 
@@ -77,20 +94,6 @@ namespace Engine::ChunkSpace
         static void removeChunk(vec3 pos);
         static void meshChunks();
         static void bufferChunks();
-        // static void updateCollisions(Player &player, float dt);
-
-    public:
-        static void InitChunkManager(vec3 &playerPos, int renderDistance = 8)
-        {
-            glDisable(GL_CULL_FACE);
-            Texture::InitializeTextures();
-            Config::SetRenderDistance(renderDistance);
-            generateInitialChunks(playerPos);
-        }
-
-        static void UpdateChunks(const Frustum &frustum, const vec3 &playerPos);
-        static void RenderChunks(Shader &shader, const Frustum &frustum, float dt);
-        static vec3 HandleCollisions(vec3 playerPos, vec3 min, vec3 max);
     };
 
     vec3 ChunkManager::currentPos;
@@ -117,6 +120,186 @@ namespace Engine::ChunkSpace
 
     ContainerThreadExecutor ChunkManager::ThreadExecutor;
 
+    //====| Public Functions |=====//
+
+    /**
+     * @brief Update the chunks based on the player's position and the frustum.
+     *
+     * @param frustum The frustum for visibility culling.
+     * @param playerPos The player's position in the world.
+     */
+    void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 &playerPos)
+    {
+        generateChunks(playerPos, frustum);
+        unloadChunks(playerPos);
+
+        initSem.acquire();
+        unordered_map<vec3, Chunk *> copy = chunksToInitialize;
+        initSem.release();
+
+        if (copy.empty())
+        {
+            return;
+        }
+
+        vector<vec3> keys = ThreadExecutor.Execute<vec3, Chunk *>(
+            copy,
+            [](vec3 key, Chunk *chunk)
+            {
+                chunk->Initialize();
+            });
+
+        bufferSem.acquire();
+        ThreadExecutor.Execute<vec3>(
+            keys,
+            [&](vec3 key)
+            {
+                chunksToBuffer[key] = copy[key];
+            });
+        bufferSem.release();
+
+        initSem.acquire();
+        ThreadExecutor.Execute<vec3>(
+            keys,
+            [](vec3 key)
+            {
+                chunksToInitialize.erase(key);
+            });
+        initSem.release();
+    }
+
+    /**
+     * @brief Handle collisions for the player in the chunk space.
+     *
+     * @param playerPos The player's position in the world.
+     * @param min The minimum bounding box coordinates.
+     * @param max The maximum bounding box coordinates.
+     * @return vec3 The new position after resolving collisions.
+     */
+    vec3 ChunkManager::HandleCollisions(vec3 playerPos, vec3 min, vec3 max)
+    {
+        int chunkSize = Config::GetChunkSize();
+        vec3 cameraChunkPos = floor(playerPos / (float)chunkSize);
+        cameraChunkPos *= chunkSize;
+
+        vec3 newPos(0);
+
+        loadSem.acquire();
+        if (chunksLoaded.find(cameraChunkPos) != chunksLoaded.end())
+        {
+            newPos = chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max);
+        }
+        loadSem.release();
+
+        return newPos;
+    }
+
+    /**
+     * @brief Render the chunks in the chunk space.
+     *
+     * @param shader The shader to use for rendering.
+     * @param frustum The frustum for visibility culling.
+     * @param dt The delta time for rendering.
+     */
+    void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
+    {
+        deleteSem.acquire();
+        unordered_set<vec3> copyDelete = chunksToDelete;
+        deleteSem.release();
+
+        for (vec3 pos : copyDelete)
+        {
+            loadSem.acquire();
+            delete chunksLoaded[pos];
+            chunksLoaded.erase(pos);
+            loadSem.release();
+        }
+
+        deleteSem.acquire();
+        for (vec3 pos : copyDelete)
+            chunksToDelete.erase(pos);
+        deleteSem.release();
+
+        meshChunks();
+
+        bufferChunks();
+
+        renderSem.acquire();
+        unordered_map<vec3, Chunk *> copy = chunksToRender;
+        renderSem.release();
+
+        for (const auto &pair : copy)
+            pair.second->Render(shader);
+    }
+
+    //====| Private Functions |=====//
+
+    /**
+     * @brief Mesh the chunks that are ready for meshing. Add to the initialize queue.
+     *
+     */
+    void ChunkManager::meshChunks()
+    {
+        meshSem.acquire();
+        unordered_map<vec3, Chunk *> copy = chunksToMesh;
+        meshSem.release();
+
+        if (copy.empty())
+            return;
+
+        vector<vec3> keys;
+
+        for (const auto &pair : copy)
+        {
+            keys.push_back(pair.first);
+            pair.second->CreateMeshes();
+        }
+
+        initSem.acquire();
+        for (vec3 key : keys)
+            chunksToInitialize[key] = copy[key];
+        initSem.release();
+
+        meshSem.acquire();
+        for (vec3 key : keys)
+            chunksToMesh.erase(key);
+        meshSem.release();
+    }
+
+    /**
+     * @brief Create the buffers for the chunks that are ready for buffering. Add to the render queue.
+     *
+     */
+    void ChunkManager::bufferChunks()
+    {
+        vector<vec3> keys;
+
+        bufferSem.acquire();
+        unordered_map<vec3, Chunk *> copy = chunksToBuffer;
+        bufferSem.release();
+
+        for (const auto &pair : copy)
+        {
+            keys.push_back(pair.first);
+            pair.second->GenerateBuffers();
+        }
+
+        renderSem.acquire();
+        for (vec3 key : keys)
+            chunksToRender[key] = copy[key];
+        renderSem.release();
+
+        bufferSem.acquire();
+        for (vec3 key : keys)
+            chunksToBuffer.erase(key);
+        bufferSem.release();
+    }
+
+    /**
+     * @brief Unload chunks that are outside the render distance. Add to the delete queue.
+     *
+     * @param cameraPos
+     */
     void ChunkManager::unloadChunks(vec3 cameraPos)
     {
         int chunkSize = Config::GetChunkSize();
@@ -152,6 +335,13 @@ namespace Engine::ChunkSpace
             });
     }
 
+    /**
+     * @brief Set the neighbors of a chunk based on its position.
+     *
+     * @param chunk The chunk to set neighbors for.
+     * @param pos The position of the chunk.
+     * @return unordered_map<vec3, Chunk *> The chunks that need to be reloaded.
+     */
     unordered_map<vec3, Chunk *> ChunkManager::setChunkNeighbors(Chunk *chunk, vec3 pos)
     {
         unordered_map<vec3, Chunk *> reload;
@@ -182,6 +372,11 @@ namespace Engine::ChunkSpace
         return reload;
     }
 
+    /**
+     * @brief Remove a chunk from all queues and maps.
+     *
+     * @param pos The position of the chunk to remove.
+     */
     void ChunkManager::removeChunk(vec3 pos)
     {
         meshSem.acquire();
@@ -201,6 +396,12 @@ namespace Engine::ChunkSpace
         renderSem.release();
     }
 
+    /**
+     * @brief Generate chunks in a radius around the camera position based on the frustum.
+     *
+     * @param cameraPos The camera position in the world.
+     * @param frustum The frustum for visibility culling.
+     */
     void ChunkManager::generateChunks(vec3 cameraPos, Frustum frustum)
     {
         int chunkSize = Config::GetChunkSize();
@@ -267,166 +468,11 @@ namespace Engine::ChunkSpace
         }
     }
 
-    void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 &playerPos)
-    {
-        generateChunks(playerPos, frustum);
-        unloadChunks(playerPos);
-
-        initSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToInitialize;
-        initSem.release();
-
-        if (copy.empty())
-        {
-            return;
-        }
-
-        vector<vec3> keys = ThreadExecutor.Execute<vec3, Chunk *>(
-            copy,
-            [](vec3 key, Chunk *chunk)
-            {
-                chunk->Initialize();
-            });
-
-        bufferSem.acquire();
-        ThreadExecutor.Execute<vec3>(
-            keys,
-            [&](vec3 key)
-            {
-                chunksToBuffer[key] = copy[key];
-            });
-        bufferSem.release();
-
-        initSem.acquire();
-        ThreadExecutor.Execute<vec3>(
-            keys,
-            [](vec3 key)
-            {
-                chunksToInitialize.erase(key);
-            });
-        initSem.release();
-    }
-
-    void ChunkManager::meshChunks()
-    {
-        meshSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToMesh;
-        meshSem.release();
-
-        if (copy.empty())
-            return;
-
-        vector<vec3> keys;
-
-        for (const auto &pair : copy)
-        {
-            keys.push_back(pair.first);
-            pair.second->CreateMeshes();
-        }
-
-        initSem.acquire();
-        for (vec3 key : keys)
-            chunksToInitialize[key] = copy[key];
-        initSem.release();
-
-        meshSem.acquire();
-        for (vec3 key : keys)
-            chunksToMesh.erase(key);
-        meshSem.release();
-    }
-
-    void ChunkManager::bufferChunks()
-    {
-        vector<vec3> keys;
-
-        bufferSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToBuffer;
-        bufferSem.release();
-
-        for (const auto &pair : copy)
-        {
-            keys.push_back(pair.first);
-            pair.second->GenerateBuffers();
-        }
-
-        renderSem.acquire();
-        for (vec3 key : keys)
-            chunksToRender[key] = copy[key];
-        renderSem.release();
-
-        bufferSem.acquire();
-        for (vec3 key : keys)
-            chunksToBuffer.erase(key);
-        bufferSem.release();
-    }
-
-    vec3 ChunkManager::HandleCollisions(vec3 playerPos, vec3 min, vec3 max)
-    {
-        int chunkSize = Config::GetChunkSize();
-        vec3 cameraChunkPos = floor(playerPos / (float)chunkSize);
-        cameraChunkPos *= chunkSize;
-
-        vec3 newPos(0);
-
-        loadSem.acquire();
-        if (chunksLoaded.find(cameraChunkPos) != chunksLoaded.end())
-        {
-            newPos = chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max);
-        }
-        loadSem.release();
-
-        return newPos;
-    }
-
-    // void ChunkManager::updateCollisions(Player &player, float dt)
-    // {
-    //     vec3 pos = player.GetPos();
-    //     vec3 min = player.GetMin();
-    //     vec3 max = player.GetMax();
-
-    //     int chunkSize = Config::GetChunkSize();
-    //     vec3 cameraChunkPos = floor(pos / (float)chunkSize);
-    //     cameraChunkPos *= chunkSize;
-
-    //     loadSem.acquire();
-    //     if (chunksLoaded.find(cameraChunkPos) != chunksLoaded.end())
-    //     {
-    //         player.Update(chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max), dt);
-    //     }
-    //     loadSem.release();
-    // }
-
-    void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum, float dt)
-    {
-        deleteSem.acquire();
-        unordered_set<vec3> copyDelete = chunksToDelete;
-        deleteSem.release();
-
-        for (vec3 pos : copyDelete)
-        {
-            loadSem.acquire();
-            delete chunksLoaded[pos];
-            chunksLoaded.erase(pos);
-            loadSem.release();
-        }
-
-        deleteSem.acquire();
-        for (vec3 pos : copyDelete)
-            chunksToDelete.erase(pos);
-        deleteSem.release();
-
-        meshChunks();
-
-        bufferChunks();
-
-        renderSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToRender;
-        renderSem.release();
-
-        for (const auto &pair : copy)
-            pair.second->Render(shader);
-    }
-
+    /**
+     * @brief Generate the initial chunks around the player position.
+     *
+     * @param playerPos The player's position in the world.
+     */
     void ChunkManager::generateInitialChunks(vec3 &playerPos)
     {
         int chunkSize = Config::GetChunkSize();

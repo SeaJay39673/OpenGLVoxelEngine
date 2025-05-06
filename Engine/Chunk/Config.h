@@ -3,38 +3,24 @@
 
 namespace Engine::ChunkSpace
 {
+    /**
+     * @brief Configuration class for chunk space settings.
+     *
+     */
     class Config
     {
+    public:
+        static void SetRenderDistance(int distance) { renderDistance = distance; }
+        static int const GetRenderDistance() { return renderDistance; }
+        static void SetMaxHeight(int height) { maxHeight = height; }
+        static int const GetMaxHeight() { return maxHeight; }
+        static void SetChunkSize(int size) { chunkSize = size; }
+        static int const GetChunkSize() { return chunkSize; }
+
     private:
         static int renderDistance;
         static int maxHeight;
         static int chunkSize;
-
-    public:
-        static void SetRenderDistance(int distance)
-        {
-            renderDistance = distance;
-        }
-        static int const GetRenderDistance()
-        {
-            return renderDistance;
-        }
-        static void SetMaxHeight(int height)
-        {
-            maxHeight = height;
-        }
-        static int const GetMaxHeight()
-        {
-            return maxHeight;
-        }
-        static void SetChunkSize(int size)
-        {
-            chunkSize = size;
-        }
-        static int const GetChunkSize()
-        {
-            return chunkSize;
-        }
     };
 };
 

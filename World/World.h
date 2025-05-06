@@ -37,6 +37,8 @@ private:
     Frustum frustum;
 };
 
+//====| Public Functions |====//
+
 /**
  * @brief Construct a new World::World object
  *
@@ -119,6 +121,8 @@ void World::Run()
     Terminate();
 }
 
+//====| Private Functions |====//
+
 /**
  * @brief Starts the update thread.
  *
@@ -176,7 +180,7 @@ void World::update(float dt)
 void World::render(float dt)
 {
     shader.Use();
-    ChunkManager::RenderChunks(shader, frustum, dt);
+    ChunkManager::RenderChunks(shader, frustum);
 };
 
 #endif
