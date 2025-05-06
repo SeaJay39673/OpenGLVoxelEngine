@@ -16,9 +16,8 @@ namespace Engine::Physics
     public:
         static constexpr vec3 Acceleration{0.0f, -9.81f, 0.0f};
 
-        static vec3 Step(vec3 &velocity, duration<float> dt)
+        static vec3 Step(vec3 &velocity, float delta)
         {
-            float delta = dt.count();
             vec3 displacement = velocity * delta + 0.5f * Acceleration * delta * delta;
             velocity += Acceleration * delta;
             return displacement;

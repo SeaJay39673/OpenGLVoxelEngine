@@ -6,7 +6,6 @@
 #include "../Utility/Utility.h"
 #include "../Texture.h"
 #include "../Concurrent/ContainerThreadExecutor.h"
-#include "../Entities/Player.h"
 
 #include <mutex>
 #include <semaphore>
@@ -14,7 +13,7 @@
 #include <queue>
 #include <chrono>
 
-using glm::vec4, std::mutex, std::lock_guard, std::counting_semaphore, std::queue, std::priority_queue, std::pair, Engine::Entities::Player;
+using glm::vec4, std::mutex, std::lock_guard, std::counting_semaphore, std::queue, std::priority_queue, std::pair;
 using namespace Engine::Concurrent;
 using namespace Engine::Utility;
 using namespace std::chrono;
@@ -69,7 +68,7 @@ namespace Engine::ChunkSpace
 
         static ContainerThreadExecutor ThreadExecutor;
 
-        static void generateInitialChunks(Player &player);
+        static void generateInitialChunks(vec3 &playerPos);
 
         static unordered_map<vec3, Chunk *> setChunkNeighbors(Chunk *chunk, vec3 pos);
         static void generateChunks(vec3 cameraPos, Frustum frustum);
@@ -78,19 +77,20 @@ namespace Engine::ChunkSpace
         static void removeChunk(vec3 pos);
         static void meshChunks();
         static void bufferChunks();
-        static void updateCollisions(Player &player, duration<float> dt);
+        // static void updateCollisions(Player &player, float dt);
 
     public:
-        static void InitChunkManager(Player &player, int renderDistance = 8)
+        static void InitChunkManager(vec3 &playerPos, int renderDistance = 8)
         {
             glDisable(GL_CULL_FACE);
             Texture::InitializeTextures();
             Config::SetRenderDistance(renderDistance);
-            generateInitialChunks(player);
+            generateInitialChunks(playerPos);
         }
 
-        static void UpdateChunks(const Frustum &frustum, Player &player);
-        static void RenderChunks(Shader &shader, const Frustum &frustum, Player &player, duration<float> dt);
+        static void UpdateChunks(const Frustum &frustum, const vec3 &playerPos);
+        static void RenderChunks(Shader &shader, const Frustum &frustum, float dt);
+        static vec3 HandleCollisions(vec3 playerPos, vec3 min, vec3 max);
     };
 
     vec3 ChunkManager::currentPos;
@@ -267,9 +267,8 @@ namespace Engine::ChunkSpace
         }
     }
 
-    void ChunkManager::UpdateChunks(const Frustum &frustum, Player &player)
+    void ChunkManager::UpdateChunks(const Frustum &frustum, const vec3 &playerPos)
     {
-        vec3 playerPos = player.GetCamera().GetCameraPos();
         generateChunks(playerPos, frustum);
         unloadChunks(playerPos);
 
@@ -361,29 +360,44 @@ namespace Engine::ChunkSpace
         bufferSem.release();
     }
 
-    void ChunkManager::updateCollisions(Player &player, duration<float> dt)
+    vec3 ChunkManager::HandleCollisions(vec3 playerPos, vec3 min, vec3 max)
     {
-        vec3 pos = player.GetPos();
-        vec3 min = player.GetMin();
-        vec3 max = player.GetMax();
-
         int chunkSize = Config::GetChunkSize();
-        vec3 cameraChunkPos = floor(pos / (float)chunkSize);
+        vec3 cameraChunkPos = floor(playerPos / (float)chunkSize);
         cameraChunkPos *= chunkSize;
+
+        vec3 newPos(0);
 
         loadSem.acquire();
         if (chunksLoaded.find(cameraChunkPos) != chunksLoaded.end())
         {
-            player.Update(chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max), dt);
+            newPos = chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max);
         }
         loadSem.release();
+
+        return newPos;
     }
 
-    void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum, Player &player, duration<float> dt)
+    // void ChunkManager::updateCollisions(Player &player, float dt)
+    // {
+    //     vec3 pos = player.GetPos();
+    //     vec3 min = player.GetMin();
+    //     vec3 max = player.GetMax();
+
+    //     int chunkSize = Config::GetChunkSize();
+    //     vec3 cameraChunkPos = floor(pos / (float)chunkSize);
+    //     cameraChunkPos *= chunkSize;
+
+    //     loadSem.acquire();
+    //     if (chunksLoaded.find(cameraChunkPos) != chunksLoaded.end())
+    //     {
+    //         player.Update(chunksLoaded[cameraChunkPos]->ResolveCollisions(min, max), dt);
+    //     }
+    //     loadSem.release();
+    // }
+
+    void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum, float dt)
     {
-
-        updateCollisions(player, dt);
-
         deleteSem.acquire();
         unordered_set<vec3> copyDelete = chunksToDelete;
         deleteSem.release();
@@ -413,7 +427,7 @@ namespace Engine::ChunkSpace
             pair.second->Render(shader);
     }
 
-    void ChunkManager::generateInitialChunks(Player &player)
+    void ChunkManager::generateInitialChunks(vec3 &playerPos)
     {
         int chunkSize = Config::GetChunkSize();
         int renderDistance = Config::GetRenderDistance();
@@ -436,14 +450,14 @@ namespace Engine::ChunkSpace
                 }
         if (center == nullptr)
         {
-            player.GetCamera().SetCameraPos(vec3(0, 0, 0));
+            playerPos = vec3(0);
         }
         else
         {
             vec3 centerPos = center->GetHighestMiddleVoxel();
-            player.GetCamera().SetCameraPos(centerPos + vec3(0, 3, 0));
+            playerPos = centerPos + vec3(0, 3, 0);
         }
-        currentPos = player.GetCamera().GetCameraPos() * vec3((float)chunkSize);
+        currentPos = playerPos * vec3((float)chunkSize);
     }
 };
 

@@ -1,15 +1,18 @@
 #include <iostream>
 
-#include "./App/App.h"
-#include "World/World.h"
+// #include "./Game/Game.h"
 
-using namespace Application;
-using namespace GameSpace;
+// using namespace GameSpace;
+
+#include "./World/World.h"
 
 int main(int, char **)
 {
-    App app;
+    // Game game;
+    // game.Run();
+
     World world;
-    app.LoadGame((Game *)&world);
-    app.Run();
+    world.Run();
+
+    return 0;
 }

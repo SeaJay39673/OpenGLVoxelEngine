@@ -18,75 +18,112 @@ using std::string, std::unordered_map;
 
 namespace Engine
 {
+    /**
+     * @brief OpenGL Texture abstraction class.
+     *
+     */
     class Texture
     {
     private:
         struct texture
         {
             texture(const int &id) : id(id) {}
-            texture()
-            {
-                glGenTextures(1, &id);
-            }
+            texture() { glGenTextures(1, &id); }
             unsigned int id;
             int width, height, channels;
             string path;
             float texCoords[4][2];
-            void Bind()
-            {
-                glBindTexture(GL_TEXTURE_2D, id);
-            };
-            void Unbind()
-            {
-                glBindTexture(GL_TEXTURE_2D, 0);
-            };
+            void Bind() { glBindTexture(GL_TEXTURE_2D, id); };
+            void Unbind() { glBindTexture(GL_TEXTURE_2D, 0); };
         };
+
+    public:
+        static void RegisterTexture(VoxelType type, const string &path, int numTex, int padding, int x, int y);
+        static texture &GetTexture(VoxelType type);
+        static void InitializeTextures();
+
+    private:
         static unordered_map<VoxelType, texture> textures;
         static bool loadTexture(texture &tex);
         static void calcTexCoordds(texture &tex, int numTex, int padding, int x, int y);
-
-    public:
-        static void RegisterTexture(VoxelType type, const string &path, int numTex, int padding, int x, int y)
-        {
-            for (auto &pair : textures)
-            {
-                if (pair.second.path == path)
-                {
-                    textures[type] = texture(pair.second.id);
-                    calcTexCoordds(textures[type], numTex, padding, x, y);
-                    return;
-                }
-            }
-            texture tex;
-            tex.path = path;
-            if (loadTexture(tex))
-                textures[type] = tex;
-            calcTexCoordds(textures[type], numTex, padding, x, y);
-        }
-        static texture &GetTexture(VoxelType type)
-        {
-            return textures[type];
-        }
-        static void InitializeTextures()
-        {
-            RegisterTexture(VoxelType::BRICK, "./Resources/Textures/Textures.png", 3, 0, 0, 0);
-            RegisterTexture(VoxelType::BRICK_RED, "./Resources/Textures/Textures.png", 3, 0, 0, 2);
-            RegisterTexture(VoxelType::EYE, "./Resources/Textures/Textures.png", 3, 0, 2, 0);
-            RegisterTexture(VoxelType::BLOCK, "./Resources/Textures/Textures.png", 3, 0, 1, 0);
-            RegisterTexture(VoxelType::WOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 1);
-            RegisterTexture(VoxelType::BLOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 2);
-            RegisterTexture(VoxelType::WATER, "./Resources/Textures/Textures.png", 3, 0, 1, 1);
-
-            RegisterTexture(VoxelType::TREE, "./Resources/Textures/Sprites.png", 4, 5, 2, 1);
-            RegisterTexture(VoxelType::POTION, "./Resources/Textures/Sprites.png", 4, 5, 1, 2);
-            RegisterTexture(VoxelType::SWORD, "./Resources/Textures/Sprites.png", 4, 5, 0, 2);
-            RegisterTexture(VoxelType::HEART, "./Resources/Textures/Sprites.png", 4, 5, 1, 1);
-            RegisterTexture(VoxelType::JAR, "./Resources/Textures/Sprites.png", 4, 5, 2, 0);
-        }
     };
 
     unordered_map<VoxelType, Texture::texture> Texture::textures;
 
+    //====| Public Methods |====//
+
+    /**
+     * @brief Registers a texture with the given type and path.
+     * @details This function loads the texture from the specified path and calculates its texture coordinates.
+     *  * If the texture is already registered, it updates the texture coordinates.
+     *  * Indexing is done from the top left to bottom right of the texture atlas.
+     *
+     * @param type The type of the texture to register.
+     * @param path The path to the texture file.
+     * @param numTex The number of textures in the texture atlas.
+     * @param padding The padding between textures in the atlas.
+     * @param x The x-coordinate of the texture in the atlas.
+     * @param y The y-coordinate of the texture in the atlas.
+     */
+    void Texture::RegisterTexture(VoxelType type, const string &path, int numTex, int padding, int x, int y)
+    {
+        for (auto &pair : textures)
+        {
+            if (pair.second.path == path)
+            {
+                textures[type] = texture(pair.second.id);
+                calcTexCoordds(textures[type], numTex, padding, x, y);
+                return;
+            }
+        }
+        texture tex;
+        tex.path = path;
+        if (loadTexture(tex))
+            textures[type] = tex;
+        calcTexCoordds(textures[type], numTex, padding, x, y);
+    }
+
+    /**
+     * @brief Returns the texture associated with the given VoxelType.
+     *
+     * @param type The type of the texture to retrieve.
+     * @return Texture::texture&
+     */
+    Texture::texture &Texture::GetTexture(VoxelType type)
+    {
+        return textures[type];
+    }
+
+    /**
+     * @brief Initializes a set list of textures.
+     *
+     */
+    void Texture::InitializeTextures()
+    {
+        RegisterTexture(VoxelType::BRICK, "./Resources/Textures/Textures.png", 3, 0, 0, 0);
+        RegisterTexture(VoxelType::BRICK_RED, "./Resources/Textures/Textures.png", 3, 0, 0, 2);
+        RegisterTexture(VoxelType::EYE, "./Resources/Textures/Textures.png", 3, 0, 2, 0);
+        RegisterTexture(VoxelType::BLOCK, "./Resources/Textures/Textures.png", 3, 0, 1, 0);
+        RegisterTexture(VoxelType::WOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 1);
+        RegisterTexture(VoxelType::BLOOD, "./Resources/Textures/Textures.png", 3, 0, 2, 2);
+        RegisterTexture(VoxelType::WATER, "./Resources/Textures/Textures.png", 3, 0, 1, 1);
+
+        RegisterTexture(VoxelType::TREE, "./Resources/Textures/Sprites.png", 4, 5, 2, 1);
+        RegisterTexture(VoxelType::POTION, "./Resources/Textures/Sprites.png", 4, 5, 1, 2);
+        RegisterTexture(VoxelType::SWORD, "./Resources/Textures/Sprites.png", 4, 5, 0, 2);
+        RegisterTexture(VoxelType::HEART, "./Resources/Textures/Sprites.png", 4, 5, 1, 1);
+        RegisterTexture(VoxelType::JAR, "./Resources/Textures/Sprites.png", 4, 5, 2, 0);
+    }
+
+    //====| Private Methods |====//
+
+    /**
+     * @brief Loads a texture from the specified path and generates mipmaps.
+     *
+     * @param tex The texture to load.
+     * @return true if the texture was loaded successfully
+     * @return false if the texture failed to load
+     */
     bool Texture::loadTexture(texture &tex)
     {
         unsigned char *data = stbi_load(tex.path.c_str(), &tex.width, &tex.height, &tex.channels, 0);
@@ -120,6 +157,15 @@ namespace Engine
         return true;
     }
 
+    /**
+     * @brief Calculates the texture coordinates for a given texture atlas.
+     *
+     * @param tex The texture to calculate coordinates for.
+     * @param numTex The number of textures in the atlas.
+     * @param padding The padding between textures in the atlas.
+     * @param x The x-coordinate of the texture in the atlas.
+     * @param y The y-coordinate of the texture in the atlas.
+     */
     void Texture::calcTexCoordds(texture &tex, int numTex, int padding, int x, int y)
     {
 

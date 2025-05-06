@@ -7,7 +7,7 @@ namespace IO::Mouse
     static double delx = 0, dely = 0;
     static bool firstMouse = true;
 
-    void MouseCallback(double xpos, double ypos)
+    void MouseCursorCallback(double xpos, double ypos)
     {
         if (firstMouse)
         {

@@ -3,8 +3,11 @@
 
 #include <glm/glm.hpp>
 #include "Shader.h"
+#include "../IO/Keyboard.h"
+#include "../IO/Mouse.h"
 
 using glm::vec3, glm::mat4;
+using namespace IO;
 
 namespace Engine
 {
@@ -73,6 +76,7 @@ namespace Engine
         }
 
         vec3 const GetCameraPos() const { return cameraPos; }
+        vec3 &GetCameraPos() { return cameraPos; }
         vec3 const GetCameraDirection() const { return cameraDirection; }
         mat4 const GetCameraView() const { return view; }
     };
