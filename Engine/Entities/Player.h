@@ -13,12 +13,12 @@ using namespace std::chrono;
 
 namespace Engine::Entities
 {
+    /**
+     * @brief A class for handling player input and movement.
+     *
+     */
     class Player
     {
-    private:
-        Camera camera;
-        vec3 velocity;
-
     public:
         Player(Camera &cam) : velocity(0), camera(cam) {}
         void Update(float dt)
@@ -39,7 +39,12 @@ namespace Engine::Entities
         void ProcessInput() { camera.ProcessInput(); }
         vec3 GetMin() { return camera.GetCameraPos() - vec3(.4f, 1.8, .4f); }
         vec3 GetMax() { return camera.GetCameraPos() + vec3(.4f, 0, .4f); }
+
+    private:
+        Camera camera;
+        vec3 velocity;
     };
+
 }
 
 #endif
