@@ -8,60 +8,80 @@ using glm::mat4, glm::vec3, glm::vec4;
 
 namespace Engine::Utility
 {
+    /**
+     * @brief Frustum class for frustum culling.
+     * * @details This class handles the frustum culling calculations. It uses the GLM library for matrix and vector operations.
+     *
+     */
     class Frustum
     {
+    public:
+        void Update(const mat4 &projection, const mat4 &view);
+        bool IsBoxInFrustum(const vec3 &min, const vec3 &max) const;
+
     private:
         std::array<vec4, 6> planes; // Six planes of the frustum: left, right, bottom, top, near, far
-
-    public:
-        void Update(const mat4 &projection, const mat4 &view)
-        {
-            mat4 clip = projection * view;
-
-            // Extract the planes from the combined projection-view matrix
-            planes[0] = vec4(clip[0][3] + clip[0][0], clip[1][3] + clip[1][0], clip[2][3] + clip[2][0], clip[3][3] + clip[3][0]); // Left
-            planes[1] = vec4(clip[0][3] - clip[0][0], clip[1][3] - clip[1][0], clip[2][3] - clip[2][0], clip[3][3] - clip[3][0]); // Right
-            planes[2] = vec4(clip[0][3] + clip[0][1], clip[1][3] + clip[1][1], clip[2][3] + clip[2][1], clip[3][3] + clip[3][1]); // Bottom
-            planes[3] = vec4(clip[0][3] - clip[0][1], clip[1][3] - clip[1][1], clip[2][3] - clip[2][1], clip[3][3] - clip[3][1]); // Top
-            planes[4] = vec4(clip[0][3] + clip[0][2], clip[1][3] + clip[1][2], clip[2][3] + clip[2][2], clip[3][3] + clip[3][2]); // Near
-            planes[5] = vec4(clip[0][3] - clip[0][2], clip[1][3] - clip[1][2], clip[2][3] - clip[2][2], clip[3][3] - clip[3][2]); // Far
-
-            // Normalize the planes
-            for (auto &plane : planes)
-            {
-                float length = glm::length(vec3(plane));
-                plane /= length;
-            }
-        }
-
-        bool IsBoxInFrustum(const vec3 &min, const vec3 &max) const
-        {
-            for (const auto &plane : planes)
-            {
-                // Check if all corners of the box are outside the plane
-                if (glm::dot(vec3(plane), vec3(min.x, min.y, min.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(max.x, min.y, min.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(min.x, max.y, min.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(max.x, max.y, min.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(min.x, min.y, max.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(max.x, min.y, max.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(min.x, max.y, max.z)) + plane.w > 0.0f)
-                    continue;
-                if (glm::dot(vec3(plane), vec3(max.x, max.y, max.z)) + plane.w > 0.0f)
-                    continue;
-
-                // If all corners are outside, the box is not in the frustum
-                return false;
-            }
-            return true;
-        }
     };
+
+    //====| Public Methods |====//
+    /**
+     * @brief Updates the frustum planes based on the projection and view matrices.
+     * @param projection The projection matrix.
+     * @param view The view matrix.
+     */
+    void Frustum::Update(const mat4 &projection, const mat4 &view)
+    {
+        mat4 clip = projection * view;
+
+        // Extract the planes from the combined projection-view matrix
+        planes[0] = vec4(clip[0][3] + clip[0][0], clip[1][3] + clip[1][0], clip[2][3] + clip[2][0], clip[3][3] + clip[3][0]); // Left
+        planes[1] = vec4(clip[0][3] - clip[0][0], clip[1][3] - clip[1][0], clip[2][3] - clip[2][0], clip[3][3] - clip[3][0]); // Right
+        planes[2] = vec4(clip[0][3] + clip[0][1], clip[1][3] + clip[1][1], clip[2][3] + clip[2][1], clip[3][3] + clip[3][1]); // Bottom
+        planes[3] = vec4(clip[0][3] - clip[0][1], clip[1][3] - clip[1][1], clip[2][3] - clip[2][1], clip[3][3] - clip[3][1]); // Top
+        planes[4] = vec4(clip[0][3] + clip[0][2], clip[1][3] + clip[1][2], clip[2][3] + clip[2][2], clip[3][3] + clip[3][2]); // Near
+        planes[5] = vec4(clip[0][3] - clip[0][2], clip[1][3] - clip[1][2], clip[2][3] - clip[2][2], clip[3][3] - clip[3][2]); // Far
+
+        // Normalize the planes
+        for (auto &plane : planes)
+        {
+            float length = glm::length(vec3(plane));
+            plane /= length;
+        }
+    }
+
+    /**
+     * @brief Checks if a box defined by its minimum and maximum corners is inside the frustum.
+     * @param min The minimum corner of the box.
+     * @param max The maximum corner of the box.
+     * @return true if the box is inside the frustum, false otherwise.
+     */
+    bool Frustum::IsBoxInFrustum(const vec3 &min, const vec3 &max) const
+    {
+        for (const auto &plane : planes)
+        {
+            // Check if all corners of the box are outside the plane
+            if (glm::dot(vec3(plane), vec3(min.x, min.y, min.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(max.x, min.y, min.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(min.x, max.y, min.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(max.x, max.y, min.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(min.x, min.y, max.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(max.x, min.y, max.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(min.x, max.y, max.z)) + plane.w > 0.0f)
+                continue;
+            if (glm::dot(vec3(plane), vec3(max.x, max.y, max.z)) + plane.w > 0.0f)
+                continue;
+
+            // If all corners are outside, the box is not in the frustum
+            return false;
+        }
+        return true;
+    }
 };
 
 #endif

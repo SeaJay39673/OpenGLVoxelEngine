@@ -5,13 +5,12 @@
 
 namespace Engine::Utility
 {
+    /**
+     * @brief Generator class for generating Perlin noise.
+     * @details This class uses a Perlin noise library to generate 2D and 3D noise values.
+     */
     class Generator
     {
-    private:
-        static siv::PerlinNoise::seed_type seed;
-        static float frequency;
-        static siv::PerlinNoise perlin;
-
     public:
         void SetFrequency(float freq)
         {
@@ -30,6 +29,11 @@ namespace Engine::Utility
         {
             return perlin.noise3D_01(x * frequency, y * frequency, z * frequency);
         }
+
+    private:
+        static siv::PerlinNoise::seed_type seed;
+        static float frequency;
+        static siv::PerlinNoise perlin;
     };
     float Generator::frequency = .01f;
     siv::PerlinNoise::seed_type Generator::seed = 12345u;
