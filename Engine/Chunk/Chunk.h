@@ -32,17 +32,14 @@ namespace Engine::ChunkSpace
         BACK
     };
 
+    /**
+     * @brief A class representing a chunk of voxels in a 3D space.
+     *
+     * @details This class handles the generation, rendering, and collision detection of voxels within a chunk.
+     * It also manages neighboring chunks and their interactions.
+     */
     class Chunk
     {
-    private:
-        int position[3];
-        const int chunkSize;
-        vector<VoxelType> voxels;
-        unordered_set<VoxelType> voxelsHash;
-        unordered_map<VoxelType, Mesh *> meshMap;
-        Chunk *neighbors[6];
-        bool checkNeighbor(int x, int y, int z);
-
     public:
         Chunk(int pos[3]);
         ~Chunk();
@@ -73,8 +70,26 @@ namespace Engine::ChunkSpace
             return voxels[x * (chunkSize + 2) * (chunkSize + 2) + y * (chunkSize + 2) + z];
         }
         vec3 ResolveCollisions(const vec3 &cameraMin, const vec3 &cameraMax);
+
+    private:
+        int position[3];
+        const int chunkSize;
+        vector<VoxelType> voxels;
+        unordered_set<VoxelType> voxelsHash;
+        unordered_map<VoxelType, Mesh *> meshMap;
+        Chunk *neighbors[6];
+        bool checkNeighbor(int x, int y, int z);
     };
 
+    //====| Constructors/Destructors |=====//
+
+    /**
+     * @brief Constructor for the Chunk class.
+     * @details Initializes the chunk with a given position and generates voxels based on noise functions.
+     * @note Call the constructor in either the main thread or a worker thread.
+     *
+     * @param pos The position of the chunk in 3D space.
+     */
     Chunk::Chunk(int pos[3]) : chunkSize(Config::GetChunkSize())
     {
         for (int i = 0; i < 6; i++)
@@ -130,6 +145,10 @@ namespace Engine::ChunkSpace
                 }
     }
 
+    /**
+     * @brief Destructor for the Chunk class.
+     *
+     */
     Chunk::~Chunk()
     {
 
@@ -164,12 +183,14 @@ namespace Engine::ChunkSpace
         meshMap.clear();
     }
 
-    bool Chunk::checkNeighbor(int x, int y, int z)
-    {
-        VoxelType neighbor = GetVoxel(x, y, z);
-        return neighbor == VoxelType::AIR || neighbor == VoxelType::WATER;
-    }
+    //====| Public Functions |=====//
 
+    /**
+     * @brief Sets a neighbor chunk in the specified direction.
+     *
+     * @param neighbor The neighbor chunk to set.
+     * @param direction The direction of the neighbor chunk.
+     */
     void Chunk::SetNeighbor(Chunk *neighbor, ChunkNeighbor direction)
     {
         neighbors[(int)direction] = neighbor;
@@ -203,6 +224,12 @@ namespace Engine::ChunkSpace
         }
     }
 
+    /**
+     * @brief Checks if the chunk has any voxels.
+     *
+     * @return true if the chunk has voxels.
+     * @return false otherwise.
+     */
     bool Chunk::HasVoxels()
     {
         for (const VoxelType &type : voxelsHash)
@@ -210,6 +237,11 @@ namespace Engine::ChunkSpace
         return false;
     }
 
+    /**
+     * @brief Creates meshes for each voxel type in the chunk.
+     * @note Since this function calls OpenGL functions, it should be called in the main thread.
+     *
+     */
     void Chunk::CreateMeshes()
     {
         for (const VoxelType &type : voxelsHash)
@@ -218,6 +250,11 @@ namespace Engine::ChunkSpace
         }
     }
 
+    /**
+     * @brief Initializes the chunk by generating faces for each voxel.
+     * @note This function can be called on either the main thread or a worker thread.
+     *
+     */
     void Chunk::Initialize()
     {
         for (int x = 1; x < chunkSize + 1; x++)
@@ -256,6 +293,11 @@ namespace Engine::ChunkSpace
         }
     }
 
+    /**
+     * @brief Generates OpenGL buffers for each mesh in the chunk.
+     * @note Since this function calls OpenGL functions, it should be called in the main thread.
+     *
+     */
     void Chunk::GenerateBuffers()
     {
         for (auto pair : meshMap)
@@ -264,6 +306,12 @@ namespace Engine::ChunkSpace
         }
     }
 
+    /**
+     * @brief Renders the chunk using the provided shader.
+     * @note Since this function calls OpenGL functions, it should be called in the main thread.
+     *
+     * @param shader
+     */
     void Chunk::Render(Shader &shader)
     {
         for (auto &pair : meshMap)
@@ -272,6 +320,13 @@ namespace Engine::ChunkSpace
         }
     }
 
+    /**
+     * @brief Resolves collisions between the camera and the chunk's voxels.
+     *
+     * @param cameraMin The minimum coordinates of the camera's bounding box.
+     * @param cameraMax The maximum coordinates of the camera's bounding box.
+     * @return vec3 The correction vector to resolve the collisions.
+     */
     vec3 Chunk::ResolveCollisions(const vec3 &cameraMin, const vec3 &cameraMax)
     {
         vec3 correction(0.0f);
@@ -296,6 +351,23 @@ namespace Engine::ChunkSpace
             }
         }
         return correction;
+    }
+
+    //====| Private Functions |=====//
+
+    /**
+     * @brief Checks the type of a voxel at the given coordinates.
+     *
+     * @param x The x-coordinate of the voxel.
+     * @param y The y-coordinate of the voxel.
+     * @param z The z-coordinate of the voxel.
+     * @return true if the voxel is AIR or WATER.
+     * @return false otherwise.
+     */
+    bool Chunk::checkNeighbor(int x, int y, int z)
+    {
+        VoxelType neighbor = GetVoxel(x, y, z);
+        return neighbor == VoxelType::AIR || neighbor == VoxelType::WATER;
     }
 }
 
