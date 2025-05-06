@@ -20,6 +20,8 @@ namespace Engine
 {
     /**
      * @brief OpenGL Texture abstraction class.
+     * * @details This class handles the loading and binding of OpenGL textures. It also provides methods to register and retrieve textures based on their VoxelType.
+     * *      Since this texture class creates OpenGL textures, the texture methods must be called on the main thread.
      *
      */
     class Texture

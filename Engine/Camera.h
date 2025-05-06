@@ -3,41 +3,22 @@
 
 #include <glm/glm.hpp>
 #include "Shader.h"
-#include "../IO/Keyboard.h"
-#include "../IO/Mouse.h"
+#include "../IO/IO.h"
 
 using glm::vec3, glm::mat4;
 using namespace IO;
 
 namespace Engine
 {
+    /**
+     * @brief Camera class for handling camera movement and view matrix.
+     * @details This class handles camera movement and view matrix updates. It uses the GLM library for matrix and vector operations.
+     *      Since this camera updates the OpenGL shader uniforms, the camera methods must be called on the main thread.
+     */
     class Camera
     {
-    private:
-        mat4 view;
-        vec3 cameraPos, cameraUp, cameraFront, cameraRight, cameraDirection, up;
-        float pitch, yaw, roll;
-        float speed = 10.0f;
-        Shader *shader;
-
-        void updateCamera();
-
     public:
-        Camera(Shader *shader, vec3 up = vec3(0, 1, 0)) : shader(shader), view(1.f), up(up), yaw(-90), pitch(0), roll(0)
-        {
-            // Only used in setup
-            vec3 cameraTarget = vec3(0, 0, -1); // Where the camera is looking at
-
-            // Will vary with movement
-            cameraPos = vec3(0, 0, 0);
-            cameraDirection = glm::normalize(cameraPos - cameraTarget);
-            cameraFront = glm::normalize(cameraPos - cameraDirection);
-            cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-            cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
-
-            updateCamera();
-        }
-
+        Camera(Shader *shader, vec3 up = vec3(0, 1, 0));
         void SlideFront(float speed)
         {
             cameraPos += speed * vec3(cameraFront.x, 0, cameraFront.z);
@@ -67,43 +48,55 @@ namespace Engine
                 pitch = -89.0f;
             updateCamera();
         }
-        void ProcessInput();
-
         void SetCameraPos(vec3 pos)
         {
             cameraPos = pos;
             updateCamera();
         }
-
         vec3 const GetCameraPos() const { return cameraPos; }
         vec3 &GetCameraPos() { return cameraPos; }
         vec3 const GetCameraDirection() const { return cameraDirection; }
         mat4 const GetCameraView() const { return view; }
+        void ProcessInput();
+
+    private:
+        mat4 view;
+        vec3 cameraPos, cameraUp, cameraFront, cameraRight, cameraDirection, up;
+        float pitch, yaw, roll;
+        float speed = 10.0f;
+        Shader *shader;
+
+        void updateCamera();
     };
 
-    void Camera::updateCamera()
-    {
-        // Calculate new camera direction
-        cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        cameraDirection.y = sin(glm::radians(pitch));
-        cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    //====| Constructors/Destructors |====//
 
-        // Recalculate camera variables
+    /**
+     * @brief Construct a new Camera object
+     *
+     * @param shader The shader to use for the camera.
+     * @param up Which direction is up. Default is (0, 1, 0).
+     */
+    Camera::Camera(Shader *shader, vec3 up = vec3(0, 1, 0)) : shader(shader), view(1.f), up(up), yaw(-90), pitch(0), roll(0)
+    {
+        // Only used in setup
+        vec3 cameraTarget = vec3(0, 0, -1); // Where the camera is looking at
+        // Will vary with movement
+        cameraPos = vec3(0, 0, 0);
+        cameraDirection = glm::normalize(cameraPos - cameraTarget);
+        cameraFront = glm::normalize(cameraPos - cameraDirection);
         cameraRight = glm::normalize(glm::cross(up, cameraDirection));
         cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
-        cameraFront = glm::normalize(cameraDirection);
 
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
-        shader->SetMat4f("view", view);
-
-        // Update shader information
-        // if (shader != nullptr)
-        // {
-        //     shader->setVec3("viewPos", cameraPos);
-        // }
+        updateCamera();
     }
 
+    //====| Public Methods |====//
+
+    /**
+     * @brief Process input from the keyboard and mouse.
+     *
+     */
     void Camera::ProcessInput()
     {
         if (Keyboard::keys[GLFW_KEY_LEFT_CONTROL])
@@ -128,6 +121,35 @@ namespace Engine
         if (Mouse::dely)
             Pitch((float)(-Mouse::dely * 0.08));
     }
+}
+
+//====| Private Methods |====//
+
+/**
+ * @brief Update the camera view matrix and shader uniform.
+ *
+ */
+void Camera::updateCamera()
+{
+    // Calculate new camera direction
+    cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraDirection.y = sin(glm::radians(pitch));
+    cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
+    // Recalculate camera variables
+    cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+    cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
+    cameraFront = glm::normalize(cameraDirection);
+
+    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+    shader->SetMat4f("view", view);
+
+    // Update shader information
+    // if (shader != nullptr)
+    // {
+    //     shader->setVec3("viewPos", cameraPos);
+    // }
 }
 
 #endif
