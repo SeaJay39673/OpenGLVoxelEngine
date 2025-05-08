@@ -20,22 +20,7 @@ namespace Application
     class App : public Window
     {
     public:
-        App()
-        {
-            glViewport(0, 0, GetWidth(), GetHeight());
-            RegisterMouseCursorCallback(
-                "Mouse",
-                [](double x, double y)
-                {
-                    Mouse::MouseCursorCallback(x, y);
-                });
-            RegisterKeyCallback(
-                "Keyboard",
-                [](int key, int scancode, int action, int mods)
-                {
-                    Keyboard::KeyboardCallback(key, scancode, action, mods);
-                });
-        }
+        App();
         virtual void Run() = 0;
 
     private:
@@ -43,6 +28,33 @@ namespace Application
         virtual void update(float dt) = 0;
         virtual void render(float dt) = 0;
     };
+
+    /**
+     * @brief Construct a new App::App object
+     *
+     */
+    App::App()
+    {
+        glViewport(0, 0, GetWidth(), GetHeight());
+        RegisterMouseCursorCallback(
+            "Mouse",
+            [](double x, double y)
+            {
+                Mouse::MouseCursorCallback(x, y);
+            });
+        RegisterKeyCallback(
+            "Keyboard",
+            [](int key, int scancode, int action, int mods)
+            {
+                Keyboard::KeyboardCallback(key, scancode, action, mods);
+            });
+        RegisterMouseButtonCallback(
+            "MouseButton",
+            [](int button, int action, int mods)
+            {
+                Mouse::MouseButtonCallback(button, action, mods);
+            });
+    }
 }
 
 #endif

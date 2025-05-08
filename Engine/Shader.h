@@ -27,15 +27,21 @@ namespace Engine
         void UpdatePerspective(const int &width, const int &height, float depth = 256)
         {
             projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.001f, depth);
+            screenDimensions = glm::vec2(width, height);
         }
         void Use()
         {
             SetMat4f("projection", projection);
+            SetVec2f("screenDimensions", screenDimensions);
             glUseProgram(_id);
         };
         void SetMat4f(const string &name, const mat4 &mat)
         {
             glUniformMatrix4fv(glGetUniformLocation(_id, name.c_str()), 1, GL_FALSE, value_ptr(mat));
+        };
+        void SetVec2f(const string &name, const glm::vec2 &vec)
+        {
+            glUniform2f(glGetUniformLocation(_id, name.c_str()), vec.x, vec.y);
         };
         void SetInt(const std::string &name, int value)
         {
@@ -50,6 +56,7 @@ namespace Engine
     private:
         unsigned int _id;
         mat4 projection;
+        glm::vec2 screenDimensions;
         bool loadShaderCode(const string &path, string &code);
         bool compileShaderCode(const string code, unsigned int &id, bool isVertex = true);
     };

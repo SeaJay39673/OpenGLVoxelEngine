@@ -108,14 +108,14 @@ void World::Run()
             }
         }
 
-        // fps++;
+        fps++;
         // --- FPS Counter ---
-        // if (high_resolution_clock::now() - secondTime >= seconds(1))
-        // {
-        //     cout << "FPS: " << fps << endl;
-        //     secondTime = high_resolution_clock::now();
-        //     fps = 0;
-        // }
+        if (high_resolution_clock::now() - secondTime >= seconds(1))
+        {
+            cout << "FPS: " << fps << endl;
+            secondTime = high_resolution_clock::now();
+            fps = 0;
+        }
     }
 
     Terminate();

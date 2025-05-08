@@ -3,7 +3,7 @@
 
 #include "../Mesh/Mesh.h"
 #include "Voxel.h"
-#include "../Utility/Generator.h"
+#include "../Utility/Utility.h"
 #include "Config.h"
 #include "../Physics/Collisions.h"
 
@@ -21,6 +21,12 @@ using namespace Engine::Physics;
 
 namespace Engine::ChunkSpace
 {
+
+    enum class ChunkOperations
+    {
+        BREAK,
+        PLACE
+    };
 
     enum class ChunkNeighbor
     {
@@ -44,8 +50,8 @@ namespace Engine::ChunkSpace
         Chunk(int pos[3]);
         ~Chunk();
         bool HasVoxels();
-        void DeleteMeshes();
         void CreateMeshes();
+        void DeleteMeshes();
         void Initialize();
         void GenerateBuffers();
         void Render(Shader &shader);
@@ -70,6 +76,9 @@ namespace Engine::ChunkSpace
             return voxels[x * (chunkSize + 2) * (chunkSize + 2) + y * (chunkSize + 2) + z];
         }
         vec3 ResolveCollisions(const vec3 &cameraMin, const vec3 &cameraMax);
+        bool HandleRay(const Ray &ray, ChunkOperations operation);
+        void RegenerateMeshes();
+        void AddVoxel(int x, int y, int z, VoxelType type);
 
     private:
         int position[3];
@@ -79,6 +88,7 @@ namespace Engine::ChunkSpace
         unordered_map<VoxelType, Mesh *> meshMap;
         Chunk *neighbors[6];
         bool checkNeighbor(int x, int y, int z);
+        void updateVoxel(int x, int y, int z, VoxelType type);
     };
 
     //====| Constructors/Destructors |=====//
@@ -251,6 +261,19 @@ namespace Engine::ChunkSpace
     }
 
     /**
+     * @brief Deletes all meshes in the chunk.ww
+     *
+     */
+    void Chunk::DeleteMeshes()
+    {
+        for (auto pair : meshMap)
+        {
+            delete pair.second;
+        }
+        meshMap.clear();
+    }
+
+    /**
      * @brief Initializes the chunk by generating faces for each voxel.
      * @note This function can be called on either the main thread or a worker thread.
      *
@@ -353,6 +376,100 @@ namespace Engine::ChunkSpace
         return correction;
     }
 
+    /**
+     * @brief Handles ray operations (BREAK or PLACE) on the chunk's voxels.
+     *
+     * @param ray The ray to handle.
+     * @param operation The operation to perform (BREAK or PLACE).
+     * @return true if the operation was successful.
+     * @return false otherwise.
+     */
+    bool Chunk::HandleRay(const Engine::Utility::Ray &ray, ChunkOperations operation)
+    {
+        float closestT = std::numeric_limits<float>::infinity();
+        glm::ivec3 hitVoxel{-1, -1, -1};
+        std::optional<Engine::Utility::RaycastHit> bestHitInfo;
+        bool didHit = false;
+
+        // iterate all solid voxels…
+        for (int x = 1; x <= chunkSize; ++x)
+            for (int y = 1; y <= chunkSize; ++y)
+                for (int z = 1; z <= chunkSize; ++z)
+                {
+                    if (GetVoxel(x, y, z) == VoxelType::AIR)
+                        continue;
+
+                    // world‐space AABB
+                    vec3 vMin{position[0] + x - 1, position[1] + y - 1, position[2] + z - 1};
+                    vec3 vMax = vMin + vec3(1.0f);
+
+                    if (auto hitInfo = ray.Intersects(vMin, vMax))
+                    {
+                        float t = glm::dot(hitInfo->hitPosition - ray.GetOrigin(),
+                                           ray.GetDirection());
+                        if (t >= 0.0f && t < closestT)
+                        {
+                            closestT = t;
+                            hitVoxel = glm::ivec3(x, y, z);
+                            bestHitInfo = *hitInfo;
+                            didHit = true;
+                        }
+                    }
+                }
+
+        if (!didHit)
+            return false;
+
+        switch (operation)
+        {
+        case ChunkOperations::BREAK:
+            updateVoxel(hitVoxel.x, hitVoxel.y, hitVoxel.z, VoxelType::AIR);
+            break;
+
+        case ChunkOperations::PLACE:
+        {
+            // place in the adjacent voxel along the ray
+            glm::ivec3 place = hitVoxel + glm::ivec3(bestHitInfo->hitNormal);
+            updateVoxel(place.x, place.y, place.z, VoxelType::BRICK);
+        }
+        break;
+        }
+
+        RegenerateMeshes();
+        return true;
+    }
+
+    /**
+     * @brief Regenerates the meshes for the chunk.
+     * @note This function should be called in the main thread.
+     *
+     */
+    void Chunk::RegenerateMeshes()
+    {
+        for (auto pair : meshMap)
+        {
+            delete pair.second;
+        }
+        CreateMeshes();
+        Initialize();
+        GenerateBuffers();
+    }
+
+    /**
+     * @brief Adds a voxel of the specified type at the given coordinates.
+     *
+     * @param x The x-coordinate of the voxel.
+     * @param y The y-coordinate of the voxel.
+     * @param z The z-coordinate of the voxel.
+     * @param type The type of the voxel to add.
+     */
+    void Chunk::AddVoxel(int x, int y, int z, VoxelType type)
+    {
+        GetVoxel(x, y, z) = type;
+        if (type != VoxelType::AIR && voxelsHash.find(type) == voxelsHash.end())
+            voxelsHash.insert(type);
+    }
+
     //====| Private Functions |=====//
 
     /**
@@ -368,6 +485,49 @@ namespace Engine::ChunkSpace
     {
         VoxelType neighbor = GetVoxel(x, y, z);
         return neighbor == VoxelType::AIR || neighbor == VoxelType::WATER;
+    }
+
+    /**
+     * @brief Updates the voxel at the given coordinates and updates neighboring chunks if necessary.
+     *
+     * @param x The x-coordinate of the voxel.
+     * @param y The y-coordinate of the voxel.
+     * @param z The z-coordinate of the voxel.
+     * @param type The new type of the voxel.
+     */
+    void Chunk::updateVoxel(int x, int y, int z, VoxelType type)
+    {
+        AddVoxel(x, y, z, type);
+        if (x == 1 && neighbors[(int)ChunkNeighbor::LEFT] != nullptr)
+        {
+            neighbors[(int)ChunkNeighbor::LEFT]->AddVoxel(chunkSize + 1, y, z, type);
+            neighbors[(int)ChunkNeighbor::LEFT]->RegenerateMeshes();
+        }
+        if (x == chunkSize && neighbors[(int)ChunkNeighbor::RIGHT] != nullptr)
+        {
+            neighbors[(int)ChunkNeighbor::RIGHT]->AddVoxel(0, y, z, type);
+            neighbors[(int)ChunkNeighbor::RIGHT]->RegenerateMeshes();
+        }
+        if (y == 1 && neighbors[(int)ChunkNeighbor::BOTTOM] != nullptr)
+        {
+            neighbors[(int)ChunkNeighbor::BOTTOM]->AddVoxel(x, chunkSize + 1, z, type);
+            neighbors[(int)ChunkNeighbor::BOTTOM]->RegenerateMeshes();
+        }
+        if (y == chunkSize && neighbors[(int)ChunkNeighbor::TOP] != nullptr)
+        {
+            neighbors[(int)ChunkNeighbor::TOP]->AddVoxel(x, 0, z, type);
+            neighbors[(int)ChunkNeighbor::TOP]->RegenerateMeshes();
+        }
+        if (z == 1 && neighbors[(int)ChunkNeighbor::BACK] != nullptr)
+        {
+            neighbors[(int)ChunkNeighbor::BACK]->AddVoxel(x, y, chunkSize + 1, type);
+            neighbors[(int)ChunkNeighbor::BACK]->RegenerateMeshes();
+        }
+        if (z == chunkSize && neighbors[(int)ChunkNeighbor::FRONT] != nullptr)
+        {
+            neighbors[(int)ChunkNeighbor::FRONT]->AddVoxel(x, y, 0, type);
+            neighbors[(int)ChunkNeighbor::FRONT]->RegenerateMeshes();
+        }
     }
 }
 

@@ -31,6 +31,8 @@ namespace Application
         void DeregisterFrameSizeCallback(string name);
         void RegisterMouseCursorCallback(string name, function<void(double, double)> callback);
         void DeregisterMouseCursorCallback(string name);
+        void RegisterMouseButtonCallback(string name, function<void(int, int, int)> callback);
+        void DeregisterMouseButtonCallback(string name);
         void RegisterKeyCallback(string name, function<void(int, int, int, int)> callback);
         void DeregisterKeyCallback(string name);
         void DisableCursor()
@@ -52,6 +54,7 @@ namespace Application
         static int _height;
         static unordered_map<string, function<void(int, int)>> frameSizeCallbacks;
         static unordered_map<string, function<void(double, double)>> mouseCursorCallbacks;
+        static unordered_map<string, function<void(int, int, int)>> mouseButtonCallbacks;
         static unordered_map<string, function<void(int, int, int, int)>> keyCallbacks;
     };
 
@@ -60,6 +63,7 @@ namespace Application
     int Window::_height;
     unordered_map<string, function<void(int, int)>> Window::frameSizeCallbacks;
     unordered_map<string, function<void(double, double)>> Window::mouseCursorCallbacks;
+    unordered_map<string, function<void(int, int, int)>> Window::mouseButtonCallbacks;
     unordered_map<string, function<void(int, int, int, int)>> Window::keyCallbacks;
 
     //====| Constructors/Desctructors |====//
@@ -163,6 +167,27 @@ namespace Application
     }
 
     /**
+     * @brief Register a callback for the mouse button event.
+     *
+     * @param name The name of the callback.
+     * @param callback The callback function to be called when a mouse button is pressed or released.
+     */
+    void Window::RegisterMouseButtonCallback(string name, function<void(int, int, int)> callback)
+    {
+        mouseButtonCallbacks.insert({name, callback});
+    }
+
+    /**
+     * @brief Deregister a callback for the mouse button event.
+     *
+     * @param name The name of the callback to be deregistered.
+     */
+    void Window::DeregisterMouseButtonCallback(string name)
+    {
+        mouseButtonCallbacks.erase(name);
+    }
+
+    /**
      * @brief Register a callback for the keyboard key event.
      *
      * @param name The name of the callback.
@@ -263,6 +288,23 @@ namespace Application
                     for (const auto &pair : instance->keyCallbacks)
                     {
                         pair.second(key, scancode, action, mods);
+                    }
+                }
+                else
+                {
+                    cout << "No Window Instance\n";
+                }
+            });
+        glfwSetMouseButtonCallback(
+            window,
+            [](GLFWwindow *window, int button, int action, int mods)
+            {
+                Window *instance = (Window *)glfwGetWindowUserPointer(window);
+                if (instance)
+                {
+                    for (const auto &pair : instance->mouseButtonCallbacks)
+                    {
+                        pair.second(button, action, mods);
                     }
                 }
                 else

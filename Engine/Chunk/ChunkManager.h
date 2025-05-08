@@ -59,6 +59,7 @@ namespace Engine::ChunkSpace
         static void UpdateChunks(const Frustum &frustum, const vec3 &playerPos);
         static void RenderChunks(Shader &shader, const Frustum &frustum);
         static vec3 HandleCollisions(vec3 playerPos, vec3 min, vec3 max);
+        static void HandleRay(const Ray &ray, ChunkOperations operation);
 
     private:
         static vec3 currentPos;
@@ -192,6 +193,55 @@ namespace Engine::ChunkSpace
         loadSem.release();
 
         return newPos;
+    }
+
+    /**
+     * @brief Handle ray operations in the chunk space.
+     *
+     * @param ray The ray to handle.
+     * @param operation The operation to perform (BREAK or PLACE).
+     */
+    void ChunkManager::HandleRay(const Ray &ray, ChunkOperations operation)
+    {
+        int chunkSize = Config::GetChunkSize();
+        vec3 rayPos = ray.GetOrigin();
+        vec3 rayDir = ray.GetDirection();
+
+        vec3 currentChunk = glm::floor(rayPos / (float)chunkSize);
+        vec3 step = glm::sign(rayDir);
+        vec3 tMax = (glm::floor(rayPos / (float)chunkSize + step) * (float)chunkSize - rayPos) / rayDir;
+        vec3 tDelta = glm::abs((float)chunkSize / rayDir);
+
+        loadSem.acquire();
+        unordered_map<vec3, Chunk *> copy = chunksLoaded;
+        loadSem.release();
+
+        for (int i = 0; i < ray.GetLength(); ++i)
+        {
+            auto it = copy.find(currentChunk * (float)chunkSize);
+            if (it != copy.end())
+            {
+                Chunk *chunk = it->second;
+                if (chunk->HandleRay(ray, operation))
+                    break;
+            }
+            // Move to the next chunk
+            if (tMax.x < tMax.y && tMax.x < tMax.z)
+            {
+                tMax.x += tDelta.x;
+                currentChunk.x += step.x;
+            }
+            else if (tMax.y < tMax.z)
+            {
+                tMax.y += tDelta.y;
+                currentChunk.y += step.y;
+            }
+            else
+            {
+                tMax.z += tDelta.z;
+                currentChunk.z += step.z;
+            }
+        }
     }
 
     /**

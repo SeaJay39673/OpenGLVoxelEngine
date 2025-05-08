@@ -3,5 +3,6 @@
 
 #include "Frustum.h"
 #include "Generator.h"
+#include "Ray.h"
 
 #endif
