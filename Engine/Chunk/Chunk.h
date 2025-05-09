@@ -12,7 +12,7 @@
 
 #include <glm/glm.hpp>
 
-using std::vector, glm::vec3, glm::vec2, glm::mat4, std::unordered_set;
+using std::vector, glm::vec3, glm::ivec3, glm::vec2, glm::mat4, std::unordered_set;
 using namespace Engine::Utility;
 using namespace Engine::MeshSpace;
 using namespace Engine::Utility;
@@ -47,7 +47,7 @@ namespace Engine::ChunkSpace
     class Chunk
     {
     public:
-        Chunk(int pos[3]);
+        Chunk(ivec3 pos);
         ~Chunk();
         bool HasVoxels();
         void CreateMeshes();
@@ -55,7 +55,7 @@ namespace Engine::ChunkSpace
         void Initialize();
         void GenerateBuffers();
         void Render(Shader &shader);
-        int *GetPosition() { return position; }
+        const ivec3 &GetPosition() { return position; }
         void SetNeighbor(Chunk *neighbor, ChunkNeighbor direction);
         bool HasNeighbor(ChunkNeighbor direction)
         {
@@ -67,9 +67,9 @@ namespace Engine::ChunkSpace
             for (int y = chunkSize - 1; y >= 0; y--)
                 if (GetVoxel(half, y, half) != VoxelType::AIR)
                 {
-                    return vec3(half + position[0], y + position[1], half + position[2]);
+                    return ivec3(half + position[0], y + position[1], half + position[2]);
                 }
-            return vec3(half + position[0], position[1], half + position[2]);
+            return ivec3(half + position[0], position[1], half + position[2]);
         }
         VoxelType &GetVoxel(int x, int y, int z)
         {
@@ -81,7 +81,7 @@ namespace Engine::ChunkSpace
         void AddVoxel(int x, int y, int z, VoxelType type);
 
     private:
-        int position[3];
+        ivec3 position;
         const int chunkSize;
         vector<VoxelType> voxels;
         unordered_set<VoxelType> voxelsHash;
@@ -100,7 +100,7 @@ namespace Engine::ChunkSpace
      *
      * @param pos The position of the chunk in 3D space.
      */
-    Chunk::Chunk(int pos[3]) : chunkSize(Config::GetChunkSize())
+    Chunk::Chunk(ivec3 pos) : position(pos), chunkSize(Config::GetChunkSize())
     {
         for (int i = 0; i < 6; i++)
         {
@@ -108,7 +108,6 @@ namespace Engine::ChunkSpace
         }
         int extendedSize = chunkSize + 2;
         voxels.resize((extendedSize) * (extendedSize) * (extendedSize), VoxelType::AIR);
-        memcpy(position, pos, sizeof(position));
 
         for (int i = 0; i < extendedSize; i++)     // X
             for (int j = 0; j < extendedSize; j++) // Z

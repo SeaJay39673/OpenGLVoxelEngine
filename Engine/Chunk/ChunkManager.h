@@ -21,9 +21,9 @@ using namespace std::chrono;
 namespace std
 {
     template <>
-    struct hash<glm::vec3>
+    struct hash<glm::ivec3>
     {
-        size_t operator()(const glm::vec3 &v) const
+        size_t operator()(const glm::ivec3 &v) const
         {
             return ((hash<int>()((int)v.x) ^ (hash<int>()((int)v.y) << 1)) >> 1) ^ (hash<int>()((int)v.z) << 1);
         }
@@ -35,7 +35,7 @@ namespace Engine::ChunkSpace
 
     struct ComparePair
     {
-        bool operator()(const std::pair<float, glm::vec3> &a, const std::pair<float, glm::vec3> &b) const
+        bool operator()(const std::pair<float, glm::ivec3> &a, const std::pair<float, glm::ivec3> &b) const
         {
             return a.first > b.first; // Min-heap behavior: smaller float has higher priority
         }
@@ -62,62 +62,62 @@ namespace Engine::ChunkSpace
         static void HandleRay(const Ray &ray, ChunkOperations operation);
 
     private:
-        static vec3 currentPos;
+        static ivec3 currentPos;
 
-        static priority_queue<pair<float, vec3>, vector<pair<float, vec3>>, ComparePair> chunksToCreate;
+        static priority_queue<pair<float, ivec3>, vector<pair<float, ivec3>>, ComparePair> chunksToCreate;
 
         static counting_semaphore<1> meshSem;
-        static unordered_map<vec3, Chunk *> chunksToMesh;
+        static unordered_map<ivec3, Chunk *> chunksToMesh;
 
         static counting_semaphore<1> initSem;
-        static unordered_map<vec3, Chunk *> chunksToInitialize;
+        static unordered_map<ivec3, Chunk *> chunksToInitialize;
 
         static counting_semaphore<1> bufferSem;
-        static unordered_map<vec3, Chunk *> chunksToBuffer;
+        static unordered_map<ivec3, Chunk *> chunksToBuffer;
 
         static counting_semaphore<1> renderSem;
-        static unordered_map<vec3, Chunk *> chunksToRender;
+        static unordered_map<ivec3, Chunk *> chunksToRender;
 
         static counting_semaphore<1> loadSem;
-        static unordered_map<vec3, Chunk *> chunksLoaded;
+        static unordered_map<ivec3, Chunk *> chunksLoaded;
 
         static counting_semaphore<1> deleteSem;
-        static unordered_set<vec3> chunksToDelete;
+        static unordered_set<ivec3> chunksToDelete;
 
         static ContainerThreadExecutor ThreadExecutor;
 
         static void generateInitialChunks(vec3 &playerPos);
 
-        static unordered_map<vec3, Chunk *> setChunkNeighbors(Chunk *chunk, vec3 pos);
+        static unordered_map<ivec3, Chunk *> setChunkNeighbors(Chunk *chunk, ivec3 pos);
         static void generateChunks(vec3 cameraPos, Frustum frustum);
         static void unloadChunks(vec3 cameraPos);
 
-        static void removeChunk(vec3 pos);
+        static void removeChunk(ivec3 pos);
         static void meshChunks();
         static void bufferChunks();
     };
 
-    vec3 ChunkManager::currentPos;
+    ivec3 ChunkManager::currentPos;
 
-    priority_queue<pair<float, vec3>, vector<pair<float, vec3>>, ComparePair> ChunkManager::chunksToCreate;
+    priority_queue<pair<float, ivec3>, vector<pair<float, ivec3>>, ComparePair> ChunkManager::chunksToCreate;
 
     counting_semaphore<1> ChunkManager::meshSem(1);
-    unordered_map<vec3, Chunk *> ChunkManager::chunksToMesh;
+    unordered_map<ivec3, Chunk *> ChunkManager::chunksToMesh;
 
     counting_semaphore<1> ChunkManager::initSem(1);
-    unordered_map<vec3, Chunk *> ChunkManager::chunksToInitialize;
+    unordered_map<ivec3, Chunk *> ChunkManager::chunksToInitialize;
 
     counting_semaphore<1> ChunkManager::bufferSem(1);
-    unordered_map<vec3, Chunk *> ChunkManager::chunksToBuffer;
+    unordered_map<ivec3, Chunk *> ChunkManager::chunksToBuffer;
 
     counting_semaphore<1> ChunkManager::renderSem(1);
-    unordered_map<vec3, Chunk *> ChunkManager::chunksToRender;
+    unordered_map<ivec3, Chunk *> ChunkManager::chunksToRender;
 
     counting_semaphore<1> ChunkManager::loadSem(1);
-    unordered_map<vec3, Chunk *> ChunkManager::chunksLoaded;
+    unordered_map<ivec3, Chunk *> ChunkManager::chunksLoaded;
 
     counting_semaphore<1> ChunkManager::deleteSem(1);
-    unordered_set<vec3> ChunkManager::chunksToDelete;
+    unordered_set<ivec3> ChunkManager::chunksToDelete;
 
     ContainerThreadExecutor ChunkManager::ThreadExecutor;
 
@@ -135,7 +135,7 @@ namespace Engine::ChunkSpace
         unloadChunks(playerPos);
 
         initSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToInitialize;
+        unordered_map<ivec3, Chunk *> copy = chunksToInitialize;
         initSem.release();
 
         if (copy.empty())
@@ -143,26 +143,26 @@ namespace Engine::ChunkSpace
             return;
         }
 
-        vector<vec3> keys = ThreadExecutor.Execute<vec3, Chunk *>(
+        vector<ivec3> keys = ThreadExecutor.Execute<ivec3, Chunk *>(
             copy,
-            [](vec3 key, Chunk *chunk)
+            [](ivec3 key, Chunk *chunk)
             {
                 chunk->Initialize();
             });
 
         bufferSem.acquire();
-        ThreadExecutor.Execute<vec3>(
+        ThreadExecutor.Execute<ivec3>(
             keys,
-            [&](vec3 key)
+            [&](ivec3 key)
             {
                 chunksToBuffer[key] = copy[key];
             });
         bufferSem.release();
 
         initSem.acquire();
-        ThreadExecutor.Execute<vec3>(
+        ThreadExecutor.Execute<ivec3>(
             keys,
-            [](vec3 key)
+            [](ivec3 key)
             {
                 chunksToInitialize.erase(key);
             });
@@ -207,18 +207,18 @@ namespace Engine::ChunkSpace
         vec3 rayPos = ray.GetOrigin();
         vec3 rayDir = ray.GetDirection();
 
-        vec3 currentChunk = glm::floor(rayPos / (float)chunkSize);
-        vec3 step = glm::sign(rayDir);
-        vec3 tMax = (glm::floor(rayPos / (float)chunkSize + step) * (float)chunkSize - rayPos) / rayDir;
-        vec3 tDelta = glm::abs((float)chunkSize / rayDir);
+        ivec3 currentChunk = glm::floor(rayPos / (float)chunkSize);
+        ivec3 step = glm::sign(rayDir);
+        ivec3 tMax = (glm::floor(rayPos / (float)chunkSize + vec3(step)) * (float)chunkSize - rayPos) / rayDir;
+        ivec3 tDelta = glm::abs((float)chunkSize / rayDir);
 
         loadSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksLoaded;
+        unordered_map<ivec3, Chunk *> copy = chunksLoaded;
         loadSem.release();
 
         for (int i = 0; i < ray.GetLength(); ++i)
         {
-            auto it = copy.find(currentChunk * (float)chunkSize);
+            auto it = copy.find(currentChunk * chunkSize);
             if (it != copy.end())
             {
                 Chunk *chunk = it->second;
@@ -254,10 +254,10 @@ namespace Engine::ChunkSpace
     void ChunkManager::RenderChunks(Shader &shader, const Frustum &frustum)
     {
         deleteSem.acquire();
-        unordered_set<vec3> copyDelete = chunksToDelete;
+        unordered_set<ivec3> copyDelete = chunksToDelete;
         deleteSem.release();
 
-        for (vec3 pos : copyDelete)
+        for (ivec3 pos : copyDelete)
         {
             loadSem.acquire();
             delete chunksLoaded[pos];
@@ -266,7 +266,7 @@ namespace Engine::ChunkSpace
         }
 
         deleteSem.acquire();
-        for (vec3 pos : copyDelete)
+        for (ivec3 pos : copyDelete)
             chunksToDelete.erase(pos);
         deleteSem.release();
 
@@ -275,7 +275,7 @@ namespace Engine::ChunkSpace
         bufferChunks();
 
         renderSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToRender;
+        unordered_map<ivec3, Chunk *> copy = chunksToRender;
         renderSem.release();
 
         for (const auto &pair : copy)
@@ -291,13 +291,13 @@ namespace Engine::ChunkSpace
     void ChunkManager::meshChunks()
     {
         meshSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToMesh;
+        unordered_map<ivec3, Chunk *> copy = chunksToMesh;
         meshSem.release();
 
         if (copy.empty())
             return;
 
-        vector<vec3> keys;
+        vector<ivec3> keys;
 
         for (const auto &pair : copy)
         {
@@ -306,12 +306,12 @@ namespace Engine::ChunkSpace
         }
 
         initSem.acquire();
-        for (vec3 key : keys)
+        for (ivec3 key : keys)
             chunksToInitialize[key] = copy[key];
         initSem.release();
 
         meshSem.acquire();
-        for (vec3 key : keys)
+        for (ivec3 key : keys)
             chunksToMesh.erase(key);
         meshSem.release();
     }
@@ -322,10 +322,10 @@ namespace Engine::ChunkSpace
      */
     void ChunkManager::bufferChunks()
     {
-        vector<vec3> keys;
+        vector<ivec3> keys;
 
         bufferSem.acquire();
-        unordered_map<vec3, Chunk *> copy = chunksToBuffer;
+        unordered_map<ivec3, Chunk *> copy = chunksToBuffer;
         bufferSem.release();
 
         for (const auto &pair : copy)
@@ -335,12 +335,12 @@ namespace Engine::ChunkSpace
         }
 
         renderSem.acquire();
-        for (vec3 key : keys)
+        for (ivec3 key : keys)
             chunksToRender[key] = copy[key];
         renderSem.release();
 
         bufferSem.acquire();
-        for (vec3 key : keys)
+        for (ivec3 key : keys)
             chunksToBuffer.erase(key);
         bufferSem.release();
     }
@@ -358,7 +358,7 @@ namespace Engine::ChunkSpace
         int radius = Config::GetRenderDistance();
         int radiusSquared = radius * radius;
 
-        vector<vec3> chunksToUnload;
+        vector<ivec3> chunksToUnload;
 
         loadSem.acquire();
         for (const auto &pair : chunksLoaded)
@@ -373,9 +373,9 @@ namespace Engine::ChunkSpace
         }
         loadSem.release();
 
-        ThreadExecutor.Execute<vec3>(
+        ThreadExecutor.Execute<ivec3>(
             chunksToUnload,
-            [](vec3 pos)
+            [](ivec3 pos)
             {
                 removeChunk(pos);
 
@@ -392,18 +392,18 @@ namespace Engine::ChunkSpace
      * @param pos The position of the chunk.
      * @return unordered_map<vec3, Chunk *> The chunks that need to be reloaded.
      */
-    unordered_map<vec3, Chunk *> ChunkManager::setChunkNeighbors(Chunk *chunk, vec3 pos)
+    unordered_map<ivec3, Chunk *> ChunkManager::setChunkNeighbors(Chunk *chunk, ivec3 pos)
     {
-        unordered_map<vec3, Chunk *> reload;
+        unordered_map<ivec3, Chunk *> reload;
         // Set neighbors by checking adjacent chunk positions
         unordered_map<ChunkNeighbor, vec3> neighborMap =
             {
-                {ChunkNeighbor::LEFT, pos + vec3(-Config::GetChunkSize(), 0, 0)},
-                {ChunkNeighbor::RIGHT, pos + vec3(Config::GetChunkSize(), 0, 0)},
-                {ChunkNeighbor::BACK, pos + vec3(0, 0, -Config::GetChunkSize())},
-                {ChunkNeighbor::FRONT, pos + vec3(0, 0, Config::GetChunkSize())},
-                {ChunkNeighbor::BOTTOM, pos + vec3(0, -Config::GetChunkSize(), 0)},
-                {ChunkNeighbor::TOP, pos + vec3(0, Config::GetChunkSize(), 0)}};
+                {ChunkNeighbor::LEFT, pos + ivec3(-Config::GetChunkSize(), 0, 0)},
+                {ChunkNeighbor::RIGHT, pos + ivec3(Config::GetChunkSize(), 0, 0)},
+                {ChunkNeighbor::BACK, pos + ivec3(0, 0, -Config::GetChunkSize())},
+                {ChunkNeighbor::FRONT, pos + ivec3(0, 0, Config::GetChunkSize())},
+                {ChunkNeighbor::BOTTOM, pos + ivec3(0, -Config::GetChunkSize(), 0)},
+                {ChunkNeighbor::TOP, pos + ivec3(0, Config::GetChunkSize(), 0)}};
 
         // For each direction, check if the neighboring chunk exists
         for (const auto &pair : neighborMap)
@@ -427,7 +427,7 @@ namespace Engine::ChunkSpace
      *
      * @param pos The position of the chunk to remove.
      */
-    void ChunkManager::removeChunk(vec3 pos)
+    void ChunkManager::removeChunk(ivec3 pos)
     {
         meshSem.acquire();
         chunksToMesh.erase(pos);
@@ -455,7 +455,7 @@ namespace Engine::ChunkSpace
     void ChunkManager::generateChunks(vec3 cameraPos, Frustum frustum)
     {
         int chunkSize = Config::GetChunkSize();
-        vec3 cameraChunkPos = floor(cameraPos / (float)chunkSize);
+        ivec3 cameraChunkPos = floor(cameraPos / (float)chunkSize);
 
         if (cameraChunkPos != currentPos)
         {
@@ -466,15 +466,15 @@ namespace Engine::ChunkSpace
                 for (int z = -radius; z <= radius; z++)
                     for (int y = -radius; y <= radius; y++)
                     {
-                        vec3 chunkPos = (cameraChunkPos + vec3(x, y, z)) * (float)chunkSize;
+                        ivec3 chunkPos = (cameraChunkPos + ivec3(x, y, z)) * chunkSize;
 
                         loadSem.acquire();
                         if (chunksLoaded.find(chunkPos) == chunksLoaded.end())
                         {
                             if (x * x + z * z + y * y <= radiusSquared)
                             {
-                                float dist = glm::distance(cameraPos, chunkPos);
-                                if (frustum.IsBoxInFrustum(chunkPos, chunkPos * (float)chunkSize))
+                                float dist = glm::distance(cameraPos, vec3(chunkPos));
+                                if (frustum.IsBoxInFrustum(chunkPos, chunkPos * chunkSize))
                                 {
                                     dist /= 10;
                                 }
@@ -487,7 +487,7 @@ namespace Engine::ChunkSpace
             currentPos = cameraChunkPos;
         }
 
-        vector<vec3> create;
+        vector<ivec3> create;
 
         while (!chunksToCreate.empty())
         {
@@ -495,12 +495,11 @@ namespace Engine::ChunkSpace
             chunksToCreate.pop();
         }
 
-        int chunksCreated = ThreadExecutor.Execute<vec3>(
+        int chunksCreated = ThreadExecutor.Execute<ivec3>(
             create,
-            [](vec3 pos)
+            [](ivec3 pos)
             {
-                int loc[3] = {(int)pos.x, (int)pos.y, (int)pos.z};
-                Chunk *chunk = new Chunk(loc);
+                Chunk *chunk = new Chunk(pos);
                 meshSem.acquire();
                 chunksToMesh[pos] = chunk;
                 meshSem.release();
@@ -513,7 +512,7 @@ namespace Engine::ChunkSpace
         for (int i = 0; i < chunksCreated; i++)
         {
             loadSem.acquire();
-            unordered_map<vec3, Chunk *> temp = setChunkNeighbors(chunksLoaded[create[i]], create[i]);
+            unordered_map<ivec3, Chunk *> temp = setChunkNeighbors(chunksLoaded[create[i]], create[i]);
             loadSem.release();
         }
     }
@@ -535,9 +534,8 @@ namespace Engine::ChunkSpace
                     int xPos = i * chunkSize;
                     int yPos = k * chunkSize;
                     int zPos = j * chunkSize;
-                    int pos[3] = {xPos, yPos, zPos};
-                    vec3 vecPos(xPos, yPos, zPos);
-                    Chunk *chunk = new Chunk(pos);
+                    ivec3 vecPos(xPos, yPos, zPos);
+                    Chunk *chunk = new Chunk(vecPos);
                     chunksToMesh[vecPos] = chunk;
                     if (chunk->HasVoxels() && i == 0 && j == 0 && center == nullptr)
                     {

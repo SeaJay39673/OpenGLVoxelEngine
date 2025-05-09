@@ -6,6 +6,10 @@
 #include "../Texture.h"
 #include "../Chunk/Voxel.h"
 
+#include <glm/glm.hpp>
+
+using glm::ivec3;
+
 using namespace Engine::ChunkSpace::Voxel;
 
 namespace Engine::MeshSpace
@@ -27,10 +31,7 @@ namespace Engine::MeshSpace
     class Mesh
     {
     public:
-        Mesh(VoxelType type, int pos[3]) : type(type)
-        {
-            memcpy(position, pos, sizeof(position));
-        }
+        Mesh(VoxelType type, ivec3 pos) : position(pos), type(type) {}
         ~Mesh()
         {
             delete vbo;
@@ -51,7 +52,7 @@ namespace Engine::MeshSpace
         VoxelType type;
         VAO vao;
         BO *vbo = nullptr, *ebo = nullptr;
-        int position[3];
+        ivec3 position;
         vector<Vertex> vertices;
         vector<unsigned int> indices;
     };

@@ -23,6 +23,4 @@ Then run "CMake: Build" and finally "CMake: Debug";
 # Developer Notes:
 
 ## TODO:
-* ### Optimize chunk mesh
-    - Only render the top faces exposed to air $\checkmark$
-    - Have chunks talk to neighbors so touching voxels dont render inside faces
+* ### Research and develop/implement a method for compressing chunks and storing them on disk
