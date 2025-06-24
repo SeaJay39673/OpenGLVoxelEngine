@@ -24,3 +24,5 @@ Then run "CMake: Build" and finally "CMake: Debug";
 
 ## TODO:
 * ### Research and develop/implement a method for compressing chunks and storing them on disk
+
+* ### Create a custom hashmap class for faster parallelism
