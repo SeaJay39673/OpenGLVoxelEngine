@@ -6,7 +6,6 @@
 #include "../Utility/Utility.h"
 #include "../Texture.h"
 #include "../Concurrent/ContainerThreadExecutor.h"
-
 #include <mutex>
 #include <semaphore>
 #include <unordered_set>
@@ -536,7 +535,10 @@ namespace Engine::ChunkSpace
                     int zPos = j * chunkSize;
                     ivec3 vecPos(xPos, yPos, zPos);
                     Chunk *chunk = new Chunk(vecPos);
-                    chunksToMesh[vecPos] = chunk;
+                    chunk->CreateMeshes();
+                    chunk->Initialize();
+                    chunk->GenerateBuffers();
+                    chunksToRender[vecPos] = chunk;
                     if (chunk->HasVoxels() && i == 0 && j == 0 && center == nullptr)
                     {
                         center = chunk;
